@@ -1,38 +1,21 @@
+  
+  require('dotenv').config();
   const express = require('express');
   const mongoose = require('mongoose');
   const bcrypt = require('bcrypt');
   const jwt = require('jsonwebtoken');
   const app = express();
+  const nodemailer=require('nodemailer')
   const cors=require('cors');
   app.use(express.json());
   app.use(cors());
-
+  const sendOTP = require('./otpMailer');
   mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
-
-  const userSchema = new mongoose.Schema({
-    name:{type:String,required:true,unique:true},
-    EmailID: { type: String, required: true, unique: true },
-    pass: { type: String, required: true }
-  });
-
-  const paperSchema = new mongoose.Schema({
-    title: { type: String, required: true },
-    subject: { type: String, required: true },
-    fileUrl: { type: String, required: true },
-    downloadCount: { type: Number, default: 0 }
-  });
-
-  const User = mongoose.model('User', userSchema);
-  const Paper = mongoose.model('Paper', paperSchema);
-
-  userSchema.pre('save', async function(next) {
-    if (this.isModified('password')) {
-      this.password = await bcrypt.hash(this.password, 10);
-    }
-    next();
-  });
+const User=require('./modals/UserSchema')
+const Paper=require('./modals/PaperSchema')
+const Otp=require('./modals/OtpSchema')
 
   const JWT_SECRET = 'your_jwt_secret'; 
 
@@ -81,17 +64,74 @@
       res.status(500).json({ message: 'Server error', error: error.message });
     }
   });
-  
+  app.post('/forgotpassword',async(req,res)=>{
+    try{
+
+      const {EmailID}=req.body;
+      console.log(req.body);
+      const user=await User.findOne({EmailID});
+      if (!user){
+          return res.status(401).json({message:"Email Doesn't Exist"});
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000);
+      const response=sendOTP(EmailID,otp);
+      
+      return res.status(200).json({ message: "Otp Sent" }); 
+
+    }
+    catch(err){
+      res.status(400).json({message:"Server Error"})
+    }
+  })
+  app.post('/otp-verify',async(req,res)=>{
+      try{
+
+          const {EmailID,otp}=req.body;
+          const otp_sent=await Otp.findOne({EmailID});
+          if(!otp_sent){
+            return res.status(308).json({messsage:"Otp Expired"})
+          }
+          if (otp==otp_sent.otp){
+            return res.status(200).json({message:"Otp is verified"})
+
+          }else{
+            return res.status(321).json({message:"Wrong Otp"})
+          }
+      }catch(err){
+          res.status(400).json({message:"Server Error"})
+      }
+    
+  })
+  app.put('/resetpassword', async (req, res) => {
+  try {
+    const { EmailID, pass } = req.body;
+
+    const user = await User.findOne({ EmailID });
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPass = await bcrypt.hash(pass, salt);
+    user.pass = hashedPass; 
+    await user.save();
+
+    return res.status(200).json({ message: "Password changed successfully" });
+  } catch (err) {
+    return res.status(400).json({ message: "Server Error" });
+  }
+});
 
   app.post('/login', async (req, res) => {
     try {
       const { EmailID,pass } = req.body;
-      console.log(EmailID,pass)
+      
       const user = await User.findOne({ EmailID });
       if (!user) {
         return res.status(401).json({ message: 'Invalid credentials, no email' });
       }
-      console.log(user.pass)
+    
       const isPasswordValid =  await bcrypt.compare(pass,user.pass);
       if (!isPasswordValid) {
         return res.status(401).json({ message: 'Invalid credentials, not correct pass' });
@@ -164,5 +204,5 @@
     }
   });
 
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
