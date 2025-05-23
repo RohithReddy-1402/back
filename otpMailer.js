@@ -7,6 +7,8 @@ const transporter = nodemailer.createTransport({
     user: process.env.GMAIL_USER,        
     pass: process.env.GMAIL_PASS,
   },
+  debug:true,
+  logger:true,
 });
 
 const sendOTP = async (toEmail, otp) => {
@@ -31,6 +33,7 @@ const sendOTP = async (toEmail, otp) => {
         setDefaultsOnInsert: true    
       }
     );
+    let info = await transporter.sendMail(mailOptions);
      console.log('OTP sent to email');
   } catch (err) {
     console.error('Failed to send OTP:', err);
