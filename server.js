@@ -133,7 +133,7 @@ app.post('/login', async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(pass, user.pass);
     if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid credentials, not correct pass' });
+      return res.status(402).json({ message: 'Invalid credentials, not correct pass' });
     }
     // const token = jwt.sign(
     //   { id: user._id, username: user.username, role: user.role },
