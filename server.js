@@ -43,9 +43,7 @@ app.post('/register', async (req, res) => {
 
     console.log(name, EmailID, pass);
 
-    const existingUser = await User.findOne({
-      $or: [{ name }, { EmailID }]
-    });
+    const existingUser = await User.findOne({ EmailID});
 
     if (existingUser) {
       return res.status(400).json({ message: 'Username or Email already exists' });
