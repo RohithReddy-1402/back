@@ -114,7 +114,7 @@ app.put('/resetpassword', async (req, res) => {
     user.pass = hashedPass;
     await user.save();
 
-    return res.status(200).json({ message: "Password changed successfully" });
+    return res.status(200).json({ name:user.name,EmailID:user.EmailID });
   } catch (err) {
     return res.status(400).json({ message: "Server Error" });
   }
