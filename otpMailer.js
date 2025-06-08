@@ -135,6 +135,7 @@ const sendOTP = async (toEmail,name, otp) => {
         .otp-digits {
             display: flex;
             justify-content: center;
+            align-items: center;
             gap: 12px;
             margin: 20px 0;
         }
@@ -146,12 +147,15 @@ const sendOTP = async (toEmail,name, otp) => {
             border: 2px solid #365cce;
             border-radius: 8px;
             display: flex;
+            margin: 0.5rem;
             align-items: center;
             justify-content: center;
             font-size: 20px;
             font-weight: 700;
             color: #365cce;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+
         }
         
         .timestamp {
@@ -313,6 +317,10 @@ const sendOTP = async (toEmail,name, otp) => {
                 width: 45px;
                 height: 45px;
                 font-size: 18px;
+                display: flex;
+                justify-content: center;
+                align-content: center;
+                text-align: center;
             }
             
             .header-subtitle {
@@ -355,10 +363,10 @@ const sendOTP = async (toEmail,name, otp) => {
                 <div class="otp-container">
                     <div class="otp-label">Your Verification Code</div>
                     <div class="otp-digits">
-                        <div class="otp-digit">${otp ? otp[0] : '0'}</div>
-                        <div class="otp-digit">${otp ? otp[1] : '0'}</div>
-                        <div class="otp-digit">${otp ? otp[2] : '0'}</div>
-                        <div class="otp-digit">${otp ? otp[3] : '0'}</div>
+                        <div class="otp-digit"><p>${otp?otp[0]:'0'}</p></div>
+                        <div class="otp-digit"><p>${otp ? otp[1] : '0'}</p></div>
+                        <div class="otp-digit"><p>${otp ? otp[2] : '0'}</p></div>
+                        <div class="otp-digit"><p>${otp ? otp[3] : '0'}</p></div>
                     </div>
                     <div class="timestamp">Sent on: ${formattedTime || new Date().toLocaleString()}</div>
                 </div>
@@ -370,7 +378,7 @@ const sendOTP = async (toEmail,name, otp) => {
                 </div>
                 
                 <div style="text-align: center;">
-                    <a href="#" class="verify-button">Verify Email Address</a>
+                    <a href="https://nitkkrpreviouspapers.vercel.app" class="verify-button">Verify Email Address</a>
                 </div>
                 
                 <div class="signature">
