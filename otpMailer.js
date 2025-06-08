@@ -14,6 +14,7 @@ const expiryTime = new Date(Date.now() + 10 * 60000);
 const formattedTime = expiryTime.toLocaleString('en-IN', {
   hour: '2-digit', minute: '2-digit', hour12: true, day: 'numeric', month: 'short', year: 'numeric'
 });
+
 const sendOTP = async (toEmail, otp) => {
   const mailOptions = {
     from: `"NIT KKR Question Paper Website" <${process.env.GMAIL_USER}>`,
