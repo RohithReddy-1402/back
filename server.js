@@ -74,7 +74,7 @@ app.post('/forgotpassword', async (req, res) => {
       return res.status(208).json({ message: "Otp Already Verified" });
     }
     const otp = Math.floor(100000 + Math.random() * 900000);
-    const response = sendOTP(EmailID, otp);
+    const response = sendOTP(EmailID, user.name,otp);
 
     return res.status(200).json({ message: "Otp Sent" });
 
