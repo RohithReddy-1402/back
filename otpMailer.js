@@ -367,6 +367,8 @@ const sendOTP = async (toEmail,name, otp) => {
                         <div class="otp-digit"><p>${otp ? otp[1] : '0'}</p></div>
                         <div class="otp-digit"><p>${otp ? otp[2] : '0'}</p></div>
                         <div class="otp-digit"><p>${otp ? otp[3] : '0'}</p></div>
+                        <div class="otp-digit"><p>${otp ? otp[4] : '0'}</p></div>
+                        <div class="otp-digit"><p>${otp ? otp[5] : '0'}</p></div>
                     </div>
                     <div class="timestamp">Sent on: ${formattedTime || new Date().toLocaleString()}</div>
                 </div>
