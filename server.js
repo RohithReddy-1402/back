@@ -70,7 +70,9 @@ app.post('/forgotpassword', async (req, res) => {
     if (!user) {
       return res.status(401).json({ message: "Email Doesn't Exist" });
     }
-
+    if (user.otp_verified){
+      return res.status(208).json({ message: "Otp Already Verified" });
+    }
     const otp = Math.floor(100000 + Math.random() * 900000);
     const response = sendOTP(EmailID, otp);
 
