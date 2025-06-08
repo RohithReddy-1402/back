@@ -2,7 +2,8 @@ const mongoose=require('mongoose')
 const userSchema = new mongoose.Schema({
     name:{type:String,required:true},
     EmailID: { type: String, required: true, unique: true },
-    pass: { type: String, required: true }
+    pass: { type: String, required: true },
+    otp_verified: { type: Boolean, default: false }
   });
   userSchema.pre('save', async function (next) {
   if (this.isModified('password')) {

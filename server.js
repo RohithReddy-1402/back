@@ -43,7 +43,7 @@ app.post('/register', async (req, res) => {
 
     console.log(name, EmailID, pass);
 
-    const existingUser = await User.findOne({ EmailID});
+    const existingUser = await User.findOne({ EmailID });
 
     if (existingUser) {
       return res.status(400).json({ message: 'Username or Email already exists' });
@@ -86,10 +86,13 @@ app.post('/otp-verify', async (req, res) => {
 
     const { EmailID, otp } = req.body;
     const otp_sent = await Otp.findOne({ EmailID });
+    const user=await User.findOne({EmailID});
     if (!otp_sent) {
       return res.status(308).json({ messsage: "Otp Expired" })
     }
-    if (otp == otp_sent.otp) {
+    if (otp == otp_sent.otp || user.otp_verified) {
+      user.otp_verified = true;
+      await user.save();
       return res.status(200).json({ message: "Otp is verified" })
 
     } else {
@@ -104,7 +107,7 @@ app.put('/resetpassword', async (req, res) => {
   try {
     const { EmailID, pass } = req.body;
 
-    const user = await User.findOne({ EmailID });
+    const user = await User.findOne({ EmailID }) ;
     if (!user) {
       return res.status(400).json({ message: "User not found" });
     }
@@ -112,9 +115,11 @@ app.put('/resetpassword', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPass = await bcrypt.hash(pass, salt);
     user.pass = hashedPass;
+    user.otp_verified = false; 
     await user.save();
 
-    return res.status(200).json({user:{ name:user.name,EmailID:user.EmailID }});
+
+    return res.status(200).json({ user: { name: user.name, EmailID: user.EmailID } });
   } catch (err) {
     return res.status(400).json({ message: "Server Error" });
   }
