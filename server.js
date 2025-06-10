@@ -33,6 +33,9 @@ const authenticate = (req, res, next) => {
     return res.status(401).json({ message: 'Invalid token' });
   }
 };
+app.get('/ping',async(req,res)=>{
+  res.send("ok");
+})
 app.post('/register', async (req, res) => {
   try {
     const { name, EmailID, pass } = req.body;
