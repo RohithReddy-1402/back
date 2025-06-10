@@ -6,9 +6,11 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const nodemailer = require('nodemailer')
 const cors = require('cors');
+
 app.use(express.json());
 app.use(cors());
-const sendOTP = require('./otpMailer');
+const sendOTP = require('./components/otpMailer');
+const sendRegMailer = require('./components/regMail');
 mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
@@ -58,6 +60,7 @@ app.post('/register', async (req, res) => {
 
     console.log(user);
     res.status(201).json({ message: 'User registered successfully' });
+    sendRegMailer(EmailID, name);
 
   } catch (error) {
     console.error(error);

@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer');
-const Otp=require('./modals/OtpSchema')
+const Otp=require('../modals/OtpSchema')
 require('dotenv').config();
 const transporter = nodemailer.createTransport({
   service: 'gmail',
