@@ -2,6 +2,7 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 const transporter=nodemailer.createTransport({
     service: 'gmail',
+    secure:true,
   auth: {
     user: process.env.GMAIL_USER,        
     pass: process.env.GMAIL_PASS,
@@ -22,8 +23,7 @@ const sendRegMail = async (email,name) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome - NIT KKR Previous Papers</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {

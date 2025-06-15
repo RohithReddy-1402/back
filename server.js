@@ -89,6 +89,19 @@ app.post('/forgotpassword', async (req, res) => {
     res.status(400).json({ message: "Server Error" })
   }
 })
+app.delete('/deleteaccount', async (req, res) => {
+  try {
+    const { EmailID } = req.body;
+    const user = await User.findOne({ EmailID });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    await User.deleteOne({ EmailID });
+  } catch (err) {
+    return res.status(400).json({ message: "Server Error" });
+  }
+  res.status(200).json({ message: "Account Deleted Successfully" });
+});
 app.post('/otp-verify', async (req, res) => {
   try {
 
