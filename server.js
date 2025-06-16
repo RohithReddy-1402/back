@@ -211,7 +211,7 @@ app.post('/login', async (req, res) => {
   }
 });
 app.post('/logout',(req,res)=>{
-  console.log(req.ip);
+  console.log(req.cookies);
   res.clearCookie('token', { httpOnly: true,
   secure: true,
   sameSite: 'None',
