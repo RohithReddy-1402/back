@@ -209,7 +209,10 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
+app.get('logout',(req,res)=>{
+  res.clearCookie('token', { path: '/' }).status(200).json({ message: 'Logged out and cookie cleared' });
 
+})
 app.get('/api/papers', authenticate, async (req, res) => {
   try {
     const papers = await Paper.find({}, 'title subject downloadCount');
