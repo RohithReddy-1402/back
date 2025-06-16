@@ -212,7 +212,10 @@ app.post('/login', async (req, res) => {
 });
 app.post('/logout',(req,res)=>{
   console.log(req.ip);
-  res.clearCookie('token', { path: '/' }).status(200).json({ message: 'Logged out and cookie cleared' });
+  res.clearCookie('token', { httpOnly: true,
+  secure: true,
+  sameSite: 'None',
+  path: '/'}).status(200).json({ message: 'Logged out and cookie cleared' });
 
 })
 app.get('/api/papers', authenticate, async (req, res) => {
