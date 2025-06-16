@@ -11,18 +11,27 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://your-live-site.com',
-  "https://qpaper-five.vercel.app",
-  "https://nitkkrpreviouspapers.vercel.app/",
-  "http://nitkkrpreviouspapers.vercel.app/"
+  'https://qpaper-five.vercel.app',
+  'https://nitkkrpreviouspapers.vercel.app',
+  'http://nitkkrpreviouspapers.vercel.app'
 ];
-app.use(express.json());
-app.use(cors({credentials: true,origin: function (origin, callback) {
+
+const corsOptions = {
+  origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true); 
+      callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS')); 
+      callback(new Error('Not allowed by CORS'));
     }
-  }})); 
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+app.use(express.json());
+
 const sendOTP = require('./components/otpMailer');
 const sendRegMailer = require('./components/regMail');
 mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
