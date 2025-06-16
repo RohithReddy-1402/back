@@ -12,7 +12,8 @@ const allowedOrigins = [
   'http://localhost:5173',
   'https://your-live-site.com',
   "https://qpaper-five.vercel.app",
-  "https://nitkkrpreviouspapers.vercel.app/"
+  "https://nitkkrpreviouspapers.vercel.app/",
+  "http://nitkkrpreviouspapers.vercel.app/"
 ];
 app.use(express.json());
 app.use(cors({credentials: true,origin: function (origin, callback) {
