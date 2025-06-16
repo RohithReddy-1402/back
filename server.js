@@ -197,6 +197,7 @@ app.post('/login', async (req, res) => {
         secure:true,
         sameSite: "None",
         maxAge: 30 * 24 * 60 * 60 * 1000,
+        path: '/'
       })
       .status(200)
       .json({
@@ -209,7 +210,8 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
-app.get('logout',(req,res)=>{
+app.post('/logout',(req,res)=>{
+  console.log(req.ip);
   res.clearCookie('token', { path: '/' }).status(200).json({ message: 'Logged out and cookie cleared' });
 
 })
