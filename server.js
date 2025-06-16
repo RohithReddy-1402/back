@@ -4,11 +4,24 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const app = express();
+const { setUser, getUser } = require('./service/auth');
 const nodemailer = require('nodemailer')
 const cors = require('cors');
-
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://your-live-site.com',
+  "https://qpaper-five.vercel.app",
+  "https://nitkkrpreviouspapers.vercel.app/"
+];
 app.use(express.json());
-app.use(cors());
+app.use(cors({credentials: true,origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true); 
+    } else {
+      callback(new Error('Not allowed by CORS')); 
+    }
+  }})); 
 const sendOTP = require('./components/otpMailer');
 const sendRegMailer = require('./components/regMail');
 mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
@@ -18,24 +31,21 @@ const User = require('./modals/UserSchema')
 const Paper = require('./modals/PaperSchema')
 const Otp = require('./modals/OtpSchema')
 
-const JWT_SECRET = 'your_jwt_secret';
-
 const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-
+  const token = req.headers.cookie?.slice(6);
   if (!token) {
     return res.status(401).json({ message: 'Authentication required' });
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Invalid token' });
   }
 };
-app.get('/ping',async(req,res)=>{
+app.get('/ping', async (req, res) => {
   res.send("ok");
 })
 app.post('/register', async (req, res) => {
@@ -76,11 +86,11 @@ app.post('/forgotpassword', async (req, res) => {
     if (!user) {
       return res.status(401).json({ message: "Email Doesn't Exist" });
     }
-    if (user.otp_verified){
+    if (user.otp_verified) {
       return res.status(208).json({ message: "Otp Already Verified" });
     }
     const otp = Math.floor(100000 + Math.random() * 900000);
-    const response = sendOTP(EmailID, user.name,otp);
+    const response = sendOTP(EmailID, user.name, otp);
 
     return res.status(200).json({ message: "Otp Sent" });
 
@@ -88,6 +98,13 @@ app.post('/forgotpassword', async (req, res) => {
   catch (err) {
     res.status(400).json({ message: "Server Error" })
   }
+})
+app.get('/auth/check', authenticate, (req, res) => {
+  res.status(200).json({ user:{
+    email :req.user.EmailID,
+    name: req.user.username
+  }
+   });
 })
 app.delete('/deleteaccount', async (req, res) => {
   try {
@@ -107,7 +124,7 @@ app.post('/otp-verify', async (req, res) => {
 
     const { EmailID, otp } = req.body;
     const otp_sent = await Otp.findOne({ EmailID });
-    const user=await User.findOne({EmailID});
+    const user = await User.findOne({ EmailID });
     if (!otp_sent) {
       return res.status(308).json({ messsage: "Otp Expired" })
     }
@@ -128,7 +145,7 @@ app.put('/resetpassword', async (req, res) => {
   try {
     const { EmailID, pass } = req.body;
 
-    const user = await User.findOne({ EmailID }) ;
+    const user = await User.findOne({ EmailID });
     if (!user) {
       return res.status(400).json({ message: "User not found" });
     }
@@ -136,7 +153,7 @@ app.put('/resetpassword', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPass = await bcrypt.hash(pass, salt);
     user.pass = hashedPass;
-    user.otp_verified = false; 
+    user.otp_verified = false;
     await user.save();
 
 
@@ -164,8 +181,20 @@ app.post('/login', async (req, res) => {
     //   JWT_SECRET,
     //   { expiresIn: '1h' }
     // );
-
-    res.status(200).json({ user: { EmailID: user.EmailID, username: user.name } });
+    const token = setUser(user);
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      })
+      .status(200)
+      .json({
+        user: {
+          EmailID: user.EmailID,
+          username: user.name,
+        },
+      });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
