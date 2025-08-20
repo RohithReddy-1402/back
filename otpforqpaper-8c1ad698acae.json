@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "otpforqpaper",
+  "private_key_id": "8c1ad698acae7e6448d469dece4ca6c07eff1f0a",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCM32neaoDWwZsC\n+sz2ucih7Vu0WEbzKuyIjhD/R+G/JyG/CBX716eC18savSE7/l3rby2a2f5jYR0D\nJo9YKu8b7Y+CP42O8pqyUlgR8dchdl58ddD85r/wTZXsU95qR+DAaGONHsO1HEr/\niB+UCwDjk9Ox2D64HPaadKdJorwvKoikDHgA7nQUzK83MxwUhh8qjPIh4zyzi2mj\nITVHRqEZM5NKQlZSBwqfRpbWtlcHKevW+FQulCVhKS4Z/3eQv83naaGnbgE/oife\n4GGXIG0ApzgsOo1zdlBtD46OVP9+1ZgAqWfN8x8M0Rw3vpk/1kArLjtdRTECBFVi\nEpvi5AAhAgMBAAECggEAHRD27OmgOk95rrB1bH3yV/jb2FbzkrZbViSr/KRF/7Ux\nCRO/x3YcbcqdMV/vNMv78HlA2WfbzYEK5azF3F0Fd4d5ehgnWuSTRzJm0hMKfrDH\n95munJP26/vyMHAwntDEXqbbTZGYs2yKS/W4AEmR7iMBBbu22zG8rytdHfwqJHft\nlvWC8RNQaq/fK2YhzZoRiJ9984EHu5UHeUx9aOaTg/79R0bmmeAqQj1saZMGiNG2\nLDuY8wRkzu4fmnJTCmm3PJMD6JLTXnxmblx4kc2JOOVXGB2ph11sZ9aoJIulOlfs\nRFq7i75obOt6H1ypM5/6P7XTSQHyYlyf6ZZuEPbdzQKBgQDBWRTXHNGHIi3gFLy0\n632+JR8w94TY+dpf2GDZRVxm64VbELtfjTDvi1MHstEViou/weOslbgLNFu3bkKO\njVtROrMv3GzkgguSYttGLVrrlm3p9cucr5q/lhIRXbVZOfSoKyTSnNwmsmyFjVhF\nYG3lCQxU/bjsX5X+Uq4C0DGv7QKBgQC6hVFbgSgUzcYP5lf+pwy4pKsC97eWOA5c\nfnFhsZ28LT65rNBBffcKLavmSHywW92xcYYqg0abLeqHJReFyFz5FrTzACVmmz2s\nJ69/vKJCQ703rNn1gJID9+WrIixZkmzOreYB7AqvWJUBdnW1Xt33mwKjj70zBHM1\ntml0rIrChQKBgDVv6mudomdH0ggJkzIpl8IyvlEpR8U0IN+2jOXf3q7vTxchI7g/\n7JN4HUWWbWUXupIQA13Sr2AhY2vqBGkjtmZX4+hJcqshKhOWUOYvaN6N3+j2rwSq\nIAntbybvkEyN0QmdivrOsaXcUFQFAa2C/jx76LWgvjhOHsWAkmlioyjtAoGAJC0N\nXYkMZBSREK5lbL+rqPhPLtEq61jN+ESR6xfO9xtzagHJlpo+2tuG1rBCdtYqhmr1\nUbOKcziRn0qjaFA3MBymVec2WdNMP+KmmEjW07FdtrmwwHwCVgCzq+CB55GNxvxV\nexPz8pRkuhbmt5nBxW9sMJsFYCrBya4qf/WjKB0CgYBG4lKjugyWDT4FSJ8qLSfm\n3CztfLmtPkum1GEr0nFYy9tuKdrxbhgzQNjObNt1CwDZyKFpTQ8SA9fCJCxmQY22\nsEqMA+m0+5nuybubcljCy8r+BY+LYQUpfUNpeLJr+9AHM638kvF4FyO5e+blnaQX\nCeKPfT05fH3DzfcQaxKYaA==\n-----END PRIVATE KEY-----\n",
+  "client_email": "questionpapers@otpforqpaper.iam.gserviceaccount.com",
+  "client_id": "106090237991356905848",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/questionpapers%40otpforqpaper.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

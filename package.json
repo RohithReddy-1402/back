@@ -11,11 +11,18 @@
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "cloudinary": "^1.41.3",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^4.21.2",
+    "firebase": "^12.1.0",
+    "fs": "^0.0.1-security",
+    "googleapis": "^156.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.12.2",
+    "multer": "^2.0.2",
+    "multer-storage-cloudinary": "^4.0.0",
+    "node-appwrite": "^17.2.0",
     "nodemailer": "^7.0.3",
     "nodemon": "^3.1.9"
   },

@@ -1,12 +1,16 @@
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const app = express();
-const { setUser, getUser } = require('./service/auth');
-const nodemailer = require('nodemailer')
-const cors = require('cors');
+import dotenv from "dotenv";
+dotenv.config();
+import express from 'express';
+import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinary from './cloudinaryconfig.js';
+import { setUser, getUser } from './service/auth.js';
+
+import cors from 'cors';
+const app=express();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
@@ -31,16 +35,26 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(express.json());
+import sendOTP from './components/otpMailer.js';
+import sendRegMailer from './components/regMail.js';
 
-const sendOTP = require('./components/otpMailer');
-const sendRegMailer = require('./components/regMail');
+import User from './modals/UserSchema.js';
+import Paper from './modals/PaperSchema.js';
+import Otp from './modals/OtpSchema.js';
+import verifypaperSchema from './modals/paperVerification.js';
 mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
-const User = require('./modals/UserSchema')
-const Paper = require('./modals/PaperSchema')
-const Otp = require('./modals/OtpSchema')
 
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "questionpapers",
+    resource_type: "raw",
+    format: "pdf",
+    public_id: (req, file) => Date.now() + "-" + file.originalname,
+  },
+})
 const authenticate = (req, res, next) => {
   const token = req.headers.cookie?.slice(6);
   if (!token) {
@@ -272,6 +286,37 @@ app.get('/api/stats/downloads', authenticate, async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
+
+app.post("/upload", async (req, res) => {
+  const { title, subject, fileId, semester, subCode, year, institution, name, mail } = req.body;
+
+  if (!title || !subject || !fileId || !semester || !subCode || !year || !institution || !name || !mail) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  try {
+    const newPaper = new verifypaperSchema({
+      title,
+      subject,
+      fileId,
+      sem: semester,          // map frontend field
+      subjectCode: subCode,   // map frontend field
+      year,
+      examType: institution,  // if institution is your examType field
+      name,
+      mail
+    });
+
+    await newPaper.save();
+    console.log("Paper uploaded successfully:", newPaper);
+    res.status(201).json({ message: "Paper uploaded successfully", paper: newPaper });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
