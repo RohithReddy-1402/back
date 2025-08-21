@@ -10,7 +10,7 @@ import cloudinary from './cloudinaryconfig.js';
 import { setUser, getUser } from './service/auth.js';
 
 import cors from 'cors';
-const app=express();
+const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
@@ -124,11 +124,12 @@ app.post('/forgotpassword', async (req, res) => {
   }
 })
 app.get('/auth/check', authenticate, (req, res) => {
-  res.status(200).json({ user:{
-    email :req.user.EmailID,
-    name: req.user.username
-  }
-   });
+  res.status(200).json({
+    user: {
+      email: req.user.EmailID,
+      name: req.user.username
+    }
+  });
 })
 app.delete('/deleteaccount', async (req, res) => {
   try {
@@ -207,12 +208,12 @@ app.post('/login', async (req, res) => {
     // );
     const token = setUser(user);
     res.cookie("token", token, {
-        httpOnly: true,
-        secure:true,
-        sameSite: "None",
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-        path: '/'
-      })
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: '/'
+    })
       .status(200)
       .json({
         user: {
@@ -224,12 +225,14 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
-app.post('/logout',(req,res)=>{
+app.post('/logout', (req, res) => {
   console.log(req.cookies);
-  res.clearCookie('token', { httpOnly: true,
-  secure: true,
-  sameSite: 'None',
-  path: '/'}).status(200).json({ message: 'Logged out and cookie cleared' });
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'None',
+    path: '/'
+  }).status(200).json({ message: 'Logged out and cookie cleared' });
 
 })
 app.get('/api/papers', authenticate, async (req, res) => {
@@ -299,10 +302,10 @@ app.post("/upload", async (req, res) => {
       title,
       subject,
       fileId,
-      sem: semester,          // map frontend field
-      subjectCode: subCode,   // map frontend field
+      sem: semester,
+      subjectCode: subCode,
       year,
-      examType: institution,  // if institution is your examType field
+      examType: institution,
       name,
       mail
     });
@@ -315,7 +318,15 @@ app.post("/upload", async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
-
+app.get("/verifypapers", async (req, res) => {
+  try {
+    const papers = await verifypaperSchema.find();
+    res.status(200).json(papers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
 
 
 const PORT = process.env.PORT || 3001;
