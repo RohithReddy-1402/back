@@ -343,7 +343,8 @@ app.post("/verifiedpaper/:id", async (req, res) => {
     const url = `https://nyc.cloud.appwrite.io/v1/storage/buckets/68a5689f000a8af36f8a/files/${req.params.id}/download?project=68a567d00002634f3687`
     const result = await cloudinary.uploader.upload(url, {
       resource_type: "raw",
-      folder: "pdf_uploads"
+      folder: "pdf_uploads",
+      flags:"attachment",
     });
     let id;
     let exist = true;
