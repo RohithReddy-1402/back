@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
+import { ID } from 'appwrite';
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
@@ -50,20 +51,14 @@ import User from './modals/UserSchema.js';
 import Paper from './modals/PaperSchema.js';
 import Otp from './modals/OtpSchema.js';
 import verifypaperSchema from './modals/paperVerification.js';
-import { uploadFile, getFileViewURL, getFileDownloadURL } from "./service/appWrite.js";
+import { createAppWriteFile,uploadFile, getFileViewURL, getFileDownloadURL } from "./service/appWrite.js";
+
+
 mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: "questionpapers",
-    resource_type: "raw",
-    format: "pdf",
-    public_id: (req, file) => Date.now() + "-" + file.originalname,
-  },
-})
+
 const authenticate = (req, res, next) => {
   const token = req.headers.cookie?.slice(6);
   if (!token) {
@@ -341,11 +336,7 @@ app.post("/verifiedpaper/:id", async (req, res) => {
     const body = req.body;
 
     const url = `https://nyc.cloud.appwrite.io/v1/storage/buckets/68a5689f000a8af36f8a/files/${req.params.id}/download?project=68a567d00002634f3687`
-    const result = await cloudinary.uploader.upload(url, {
-      resource_type: "raw",
-      folder: "pdf_uploads",
-      flags:"attachment",
-    });
+    
     let id;
     let exist = true;
     while (exist) {
@@ -354,7 +345,7 @@ app.post("/verifiedpaper/:id", async (req, res) => {
       if (!paper) exist = false;
     }
     const new_paper = new Paper({
-      paper_id: id,
+      paper_id: req.params.id,
       title: body.title,
       subject: body.subject,
       downloads: 0,
@@ -362,16 +353,15 @@ app.post("/verifiedpaper/:id", async (req, res) => {
       year: body.year,
       examType: body.examType,
       sem: body.sem,
-      paper_url: result.secure_url,
+      paper_url:url,
     });
-    console.log(new_paper);
     await new_paper.save();
     console.log("saved");
     await verifypaperSchema.findOneAndDelete({ fileId: req.params.id });
     console.log("deleted");
     res.json({
       success: true,
-      url: result.secure_url
+      url: url
     }).status(200);
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
