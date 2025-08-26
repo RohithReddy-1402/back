@@ -1,8 +1,13 @@
-const mongoose=require('mongoose')
+import mongoose from "mongoose";
 const paperSchema = new mongoose.Schema({
+    paper_id: { type: String, required: true },
     title: { type: String, required: true },
     subject: { type: String, required: true },
-    fileUrl: { type: String, required: true },
-    downloadCount: { type: Number, default: 0 }
+    sem:{type: String, required: true},
+    subjectCode:{type: String, required: true},
+    year:{type: String, required: true},
+    examType:{type: String, required: true},
+    paper_url:{type:String,required:true},
+    downloads:{type:Number,default:0}
   });
-module.exports=mongoose.model('Paper',paperSchema)
+export default mongoose.model('papers', paperSchema);

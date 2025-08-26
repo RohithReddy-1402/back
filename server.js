@@ -4,11 +4,13 @@ import express from 'express';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { nanoid } from 'nanoid';
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import cloudinary from './cloudinaryconfig.js';
-import { setUser, getUser } from './service/auth.js';
 
+import { v2 as cloudinary } from "cloudinary";
+import { setUser, getUser } from './service/auth.js';
+import axios from "axios";
 import cors from 'cors';
 const app = express();
 const allowedOrigins = [
@@ -32,6 +34,12 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 };
 
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(express.json());
@@ -42,6 +50,7 @@ import User from './modals/UserSchema.js';
 import Paper from './modals/PaperSchema.js';
 import Otp from './modals/OtpSchema.js';
 import verifypaperSchema from './modals/paperVerification.js';
+import { uploadFile, getFileViewURL, getFileDownloadURL } from "./service/appWrite.js";
 mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
@@ -235,27 +244,26 @@ app.post('/logout', (req, res) => {
   }).status(200).json({ message: 'Logged out and cookie cleared' });
 
 })
-app.get('/api/papers', authenticate, async (req, res) => {
+app.get('/papers', async (req, res) => {
   try {
-    const papers = await Paper.find({}, 'title subject downloadCount');
+    const papers = await Paper.find();
     res.json(papers);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-app.get('/api/papers/:id/download', authenticate, async (req, res) => {
+app.get('/papers/:id/download', async (req, res) => {
   try {
-    const paper = await Paper.findById(req.params.id);
-
+    const paper = await Paper.findOne({ paper_id: req.params.id });
     if (!paper) {
       return res.status(404).json({ message: 'Paper not found' });
     }
 
-    paper.downloadCount += 1;
+    paper.downloads++;
     await paper.save();
 
-    res.json({ fileUrl: paper.fileUrl, downloadCount: paper.downloadCount });
+    return res.status(200);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -311,7 +319,7 @@ app.post("/upload", async (req, res) => {
     });
 
     await newPaper.save();
-    console.log("Paper uploaded successfully:", newPaper);
+    console.log("Paper uploaded succes://back-u7se.onrender.comssfully:", newPaper);
     res.status(201).json({ message: "Paper uploaded successfully", paper: newPaper });
   } catch (error) {
     console.error(error);
@@ -328,6 +336,46 @@ app.get("/verifypapers", async (req, res) => {
   }
 });
 
+app.post("/verifiedpaper/:id", async (req, res) => {
+  try {
+    const body = req.body;
+
+    const url = `https://nyc.cloud.appwrite.io/v1/storage/buckets/68a5689f000a8af36f8a/files/${req.params.id}/download?project=68a567d00002634f3687`
+    const result = await cloudinary.uploader.upload(url, {
+      resource_type: "raw",
+      folder: "pdf_uploads"
+    });
+    let id;
+    let exist = true;
+    while (exist) {
+      id = nanoid(6);
+      const paper = await Paper.findOne({ paper_id: id });
+      if (!paper) exist = false;
+    }
+    const new_paper = new Paper({
+      paper_id: id,
+      title: body.title,
+      subject: body.subject,
+      downloads: 0,
+      subjectCode: body.subjectCode,
+      year: body.year,
+      examType: body.examType,
+      sem: body.sem,
+      paper_url: result.secure_url,
+    });
+    console.log(new_paper);
+    await new_paper.save();
+    console.log("saved");
+    await verifypaperSchema.findOneAndDelete({ fileId: req.params.id });
+    console.log("deleted");
+    res.json({
+      success: true,
+      url: result.secure_url
+    }).status(200);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
