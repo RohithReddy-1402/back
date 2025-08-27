@@ -4,11 +4,12 @@ dotenv.config();
 import { Client, Storage, ID } from "appwrite";
 
 const client = new Client()
-  .setEndpoint("https://cloud.appwrite.io/v1") 
-  .setProject(process.env.APPWRITE_PROJECT_ID); 
+    .setEndpoint('https://nyc.cloud.appwrite.io/v1') 
+    .setProject('68a567d00002634f3687'); 
 
-const storage = new Storage(client);
-const bucketId = "68a5689f000a8af36f8a";
+const bucketId="68a5689f000a8af36f8a";
+export const storage = new Storage(client);
+
 export async function uploadFile(file) {
   try {
     const response = await storage.createFile(bucketId, ID.unique(), file);
@@ -29,4 +30,7 @@ export function getFileDownloadURL( fileId) {
 
 export function getFilePreviewURL(fileId) {
   return storage.getFilePreview(bucketId, fileId).href;
+}
+export function deleteAppWriteFile(fileId){
+  return storage.deleteFile(bucketId,fileId);
 }

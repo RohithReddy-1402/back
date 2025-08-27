@@ -51,7 +51,7 @@ import User from './modals/UserSchema.js';
 import Paper from './modals/PaperSchema.js';
 import Otp from './modals/OtpSchema.js';
 import verifypaperSchema from './modals/paperVerification.js';
-import { createAppWriteFile,uploadFile, getFileViewURL, getFileDownloadURL } from "./service/appWrite.js";
+import { uploadFile, getFileViewURL, getFileDownloadURL ,deleteAppWriteFile} from "./service/appWrite.js";
 
 
 mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
@@ -367,6 +367,16 @@ app.post("/verifiedpaper/:id", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+app.delete('/deletepaper/:id', async (req, res) => {
+  try{
+    const result=await deleteAppWriteFile(req.params.id);
+    console.log(result);
+    res.status(200).json({ success: true, message: "File deleted successfully", result });
+  }catch(err){
+    res.status(500).json({ success: false, error: err.message });
+  }
+ 
+})
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
