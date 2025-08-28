@@ -248,7 +248,7 @@ app.get('/papers', async (req, res) => {
   }
 });
 
-app.get('/papers/:id/download', async (req, res) => {
+app.patch('/papers/:id/download', async (req, res) => {
   try {
     const paper = await Paper.findOne({ paper_id: req.params.id });
     if (!paper) {
@@ -314,7 +314,7 @@ app.post("/upload", async (req, res) => {
     });
 
     await newPaper.save();
-    console.log("Paper uploaded succes://back-u7se.onrender.comssfully:", newPaper);
+    
     res.status(201).json({ message: "Paper uploaded successfully", paper: newPaper });
   } catch (error) {
     console.error(error);
@@ -367,12 +367,14 @@ app.post("/verifiedpaper/:id", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-app.delete('/deletepaper/:id', async (req, res) => {
-  try{
-    const result=await deleteAppWriteFile(req.params.id);
+app.delete("/deletepaper/:id", async (req, res) => {
+  try {
+    console.log("came");
+    const result = await deleteAppWriteFile(req.params.id);
+    await verifypaperSchema.findOneAndDelete({ fileId: req.params.id });
     console.log(result);
     res.status(200).json({ success: true, message: "File deleted successfully", result });
-  }catch(err){
+  } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
  
