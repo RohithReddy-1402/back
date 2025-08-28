@@ -258,7 +258,7 @@ app.patch('/papers/:id/download', async (req, res) => {
     paper.downloads++;
     await paper.save();
 
-    return res.status(200);
+    res.redirect(paper.paper_url);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
