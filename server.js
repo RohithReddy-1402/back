@@ -263,7 +263,7 @@ app.patch('/papers/:id/downloadcount', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
-app.get('/paper/:id/download', async (req, res) => {
+app.get('/papers/:id/download', async (req, res) => {
   try {
     const paper = await Paper.findOne({ paper_id: req.params.id });
     if (!paper) {
