@@ -248,7 +248,7 @@ app.get('/papers', async (req, res) => {
   }
 });
 
-app.patch('/papers/:id/download', async (req, res) => {
+app.patch('/papers/:id/downloadcount', async (req, res) => {
   try {
     const paper = await Paper.findOne({ paper_id: req.params.id });
     if (!paper) {
@@ -263,7 +263,17 @@ app.patch('/papers/:id/download', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
-
+app.get('/paper/:id/download', async (req, res) => {
+  try {
+    const paper = await Paper.findOne({ paper_id: req.params.id });
+    if (!paper) {
+      return res.status(404).json({ message: 'Paper not found' });
+    }
+    res.redirect(paper.paper_url);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
 app.post('/api/papers', authenticate, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
