@@ -2,8 +2,9 @@ const jwt=require('jsonwebtoken');
 function setUser(user){
     return jwt.sign({id:user._id,
         EmailID: user.EmailID,
-        username: user.name}
-        ,process.env.JWT_SECRET,{expiresIn:"30d"});
+        username: user.name,
+        role: user.role
+    }, process.env.JWT_SECRET, { expiresIn: "30d" });
 }
 function getUser(token){
     if (!token)return null;

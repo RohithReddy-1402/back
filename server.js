@@ -60,8 +60,13 @@ mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongod
 
 
 const authenticate = (req, res, next) => {
+    console.log("there1")
+
   const token = req.headers.cookie?.slice(6);
+  console.log(req.headers.cookie);
   if (!token) {
+      console.log("there2")
+
     return res.status(401).json({ message: 'Authentication required' });
   }
 
@@ -128,10 +133,12 @@ app.post('/forgotpassword', async (req, res) => {
   }
 })
 app.get('/auth/check', authenticate, (req, res) => {
+  console.log("there")
   res.status(200).json({
     user: {
       email: req.user.EmailID,
-      name: req.user.username
+      name: req.user.username,
+      role: req.user.role
     }
   });
 })

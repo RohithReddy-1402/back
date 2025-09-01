@@ -3,7 +3,8 @@ const userSchema = new mongoose.Schema({
     name:{type:String,required:true},
     EmailID: { type: String, required: true, unique: true },
     pass: { type: String, required: true },
-    otp_verified: { type: Boolean, default: false }
+    otp_verified: { type: Boolean, default: false },
+    role:{type:String,default:"user"}
   });
   userSchema.pre('save', async function (next) {
   if (this.isModified('password')) {
