@@ -13,6 +13,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { setUser, getUser } from './service/auth.js';
 import axios from "axios";
 import cors from 'cors';
+import contactRoutes from "./Routes/contact.routes.js";
 const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
@@ -47,10 +48,10 @@ app.use(express.json());
 import sendOTP from './components/otpMailer.js';
 import sendRegMailer from './components/regMail.js';
 
-import User from './modals/UserSchema.js';
-import Paper from './modals/PaperSchema.js';
-import Otp from './modals/OtpSchema.js';
-import verifypaperSchema from './modals/paperVerification.js';
+import User from './models/UserSchema.js';
+import Paper from './models/PaperSchema.js';
+import Otp from './models/OtpSchema.js';
+import verifypaperSchema from './models/paperVerification.js';
 import { uploadFile, getFileViewURL, getFileDownloadURL ,deleteAppWriteFile} from "./service/appWrite.js";
 
 
@@ -133,7 +134,6 @@ app.post('/forgotpassword', async (req, res) => {
   }
 })
 app.get('/auth/check', authenticate, (req, res) => {
-  console.log("there")
   res.status(200).json({
     user: {
       email: req.user.EmailID,
@@ -384,6 +384,7 @@ app.post("/verifiedpaper/:id", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+app.use("/api/contact",contactRoutes);
 app.delete("/deletepaper/:id", async (req, res) => {
   try {
     console.log("came");
