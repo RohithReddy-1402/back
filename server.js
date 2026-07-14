@@ -14,6 +14,7 @@ import { setUser, getUser } from './service/auth.js';
 import axios from "axios";
 import cors from 'cors';
 import contactRoutes from "./Routes/contact.routes.js";
+import syllabusRoutes from "./Routes/syllabus.route.js";
 const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
@@ -385,6 +386,7 @@ app.post("/verifiedpaper/:id", async (req, res) => {
   }
 });
 app.use("/api/contact",contactRoutes);
+app.use("/api/syllabus",syllabusRoutes);
 app.delete("/deletepaper/:id", async (req, res) => {
   try {
     console.log("came");
