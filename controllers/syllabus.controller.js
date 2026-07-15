@@ -30,7 +30,8 @@ export const getSyllabus = async (req, res, next) => {
 export const updateDownloadCount = async (req, res, next) => {
     try {
         const syllabusId = req.params.id;
-        await syllabusService.updateDownloadCountById(syllabusId);
+        const body = req.body;
+        await syllabusService.updateDownloadCountById(syllabusId,body);
         res.status(200).json({
             success: true,
             message: "Download count updated successfully"

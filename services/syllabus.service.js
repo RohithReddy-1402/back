@@ -12,10 +12,20 @@ export const getSyllabusById = async (id) => {
   return await syllabus.findById(id);
 };
 
-export const updateDownloadCountById=async(fileId)=>{
+export const updateDownloadCountById=async(fileId,body)=>{
     const syllabusData = await syllabus.findOne({id:fileId});
+    if(!syllabusData) {
+      const sub =new syllabus({
+        id:fileId,
+        title:body.title || "Unknown",
+        courseId:body.courseId || "Unknown",
+        downloadCount:1
+      });
+      await sub.save();
+    }
+    else{
     syllabusData.downloadCount += 1;
-    await syllabusData.save();
+    await syllabusData.save();}
 }
 
 export const removeSyllabus = async (id) => {
