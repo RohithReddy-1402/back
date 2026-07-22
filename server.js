@@ -22,7 +22,8 @@ const allowedOrigins = [
   'https://your-live-site.com',
   'https://qpaper-five.vercel.app',
   'https://nitkkrpreviouspapers.vercel.app',
-  'http://nitkkrpreviouspapers.vercel.app'
+  'http://nitkkrpreviouspapers.vercel.app',
+  'https://nitkkrpyqs.in'
 ];
 
 const corsOptions = {
