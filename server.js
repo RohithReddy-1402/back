@@ -273,7 +273,7 @@ app.patch('/papers/:id/downloadcount', async (req, res) => {
   }
 });
 
-app.get("/api/paper",PaperView)
+app.use("/api/paper",PaperView)
 app.get('/papers/:id/download', async (req, res) => {
   try {
     const paper = await Paper.findOne({ paper_id: req.params.id });
@@ -390,7 +390,7 @@ app.post("/verifiedpaper/:id", async (req, res) => {
 });
 app.use("/api/contact",contactRoutes);
 app.use("/api/syllabus",syllabusRoutes);
-app.use("/api",downloadRoute);
+app.use("/api/papers",downloadRoute);
 app.delete("/deletepaper/:id", async (req, res) => {
   try {
     console.log("came");
