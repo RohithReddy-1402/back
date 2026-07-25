@@ -5,7 +5,7 @@ const router =express.Router();
 router.get("/view/:fielId",async(req,res)=>{
     const fileId=req.params.fielId;
     try{
-        // const url=getFileViewURL(fileId);
+        const url=getFileViewURL(fileId);
         const paper = await Paper.findOne({ paper_id: fileId });
         if (!paper) {
           return res.status(404).json({ message: 'Paper not found' });
@@ -13,7 +13,7 @@ router.get("/view/:fielId",async(req,res)=>{
     
         paper.downloads++;
         await paper.save();
-        return res.redirect(paper.paper_url).status(200);
+        return res.redirect(url).status(200);
     }
 
      catch (error) {
