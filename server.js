@@ -55,7 +55,7 @@ import Paper from './models/PaperSchema.js';
 import Otp from './models/OtpSchema.js';
 import verifypaperSchema from './models/paperVerification.js';
 import { uploadFile, getFileViewURL, getFileDownloadURL ,deleteAppWriteFile} from "./service/appWrite.js";
-
+import downloadRoute from "./Routes/paper.download.routes.js"
 
 mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
   .then(() => console.log('Connected to MongoDB'))
@@ -388,6 +388,7 @@ app.post("/verifiedpaper/:id", async (req, res) => {
 });
 app.use("/api/contact",contactRoutes);
 app.use("/api/syllabus",syllabusRoutes);
+app.use("/api",downloadRoute);
 app.delete("/deletepaper/:id", async (req, res) => {
   try {
     console.log("came");
