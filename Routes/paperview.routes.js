@@ -2,7 +2,7 @@ import express from "express";
 import { getFileViewURL} from "../service/appWrite.js";
 import Paper from "../models/PaperSchema.js"
 const router =express.Router();
-router.get("view/:fielId",async(req,res)=>{
+router.get("/view/:fielId",async(req,res)=>{
     const fileId=req.params.fielId;
     try{
         // const url=getFileViewURL(fileId);
