@@ -1,8 +1,8 @@
 import express from "express";
-import { getFileViewURL} from "../service/appWrite";
-import Paper from "../models/PaperSchema"
+import { getFileViewURL} from "../service/appWrite.js";
+import Paper from "../models/PaperSchema.js"
 const router =express.Router();
-router.get("view/:fielId",(req,res)=>{
+router.get("view/:fielId",async(req,res)=>{
     const fileId=req.params.fielId;
     try{
         // const url=getFileViewURL(fileId);
@@ -20,3 +20,4 @@ router.get("view/:fielId",(req,res)=>{
         res.status(500).json({ message: 'Server error', error: error.message });
       }
 })
+export default router;
