@@ -49,7 +49,7 @@ app.options('*', cors(corsOptions));
 app.use(express.json());
 import sendOTP from './components/otpMailer.js';
 import sendRegMailer from './components/regMail.js';
-
+import PaperView from "./Routes/paperview.routes.js"
 import User from './models/UserSchema.js';
 import Paper from './models/PaperSchema.js';
 import Otp from './models/OtpSchema.js';
@@ -272,6 +272,8 @@ app.patch('/papers/:id/downloadcount', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
+
+app.get("/api/paper",PaperView)
 app.get('/papers/:id/download', async (req, res) => {
   try {
     const paper = await Paper.findOne({ paper_id: req.params.id });
