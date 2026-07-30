@@ -60,15 +60,21 @@ import downloadRoute from "./Routes/paper.download.routes.js"
 mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
-
-
+app.use("/public",express.static("public"));
+app.use((req, res, next) => {
+  console.log(
+    new Date().toISOString(),
+    req.method,
+    req.originalUrl
+  );
+  next();
+});
 const authenticate = (req, res, next) => {
-    console.log("there1")
+    
 
   const token = req.headers.cookie?.slice(6);
-  console.log(req.headers.cookie);
+  
   if (!token) {
-      console.log("there2")
 
     return res.status(401).json({ message: 'Authentication required' });
   }
@@ -281,21 +287,6 @@ app.get('/papers/:id/download', async (req, res) => {
       return res.status(404).json({ message: 'Paper not found' });
     }
     res.redirect(paper.paper_url);
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-app.post('/api/papers', authenticate, async (req, res) => {
-  try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Forbidden: Admin access required' });
-    }
-
-    const { title, subject, fileUrl } = req.body;
-    const paper = new Paper({ title, subject, fileUrl });
-    await paper.save();
-
-    res.status(201).json(paper);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
