@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer');
-const Otp=require('../models/OtpSchema')
+// const Otp=require('../models/OtpSchema')
 require('dotenv').config();
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -409,23 +409,27 @@ const sendOTP = async (toEmail,name, otp) => {
                     <a href="tel:+91-798-112-1103" class="contact-item">📞 +91-798-112-1103</a>
                     <a href="mailto:nitkkrpreviouspapers@gmail.com" class="contact-item">✉️ nitkkrpreviouspapers@gmail.com</a>
                     
-                    <div class="social-links">
-                        <a href="https://github.com/RohithReddy-1402" class="social-link">
-                            <svg width="20" height="20" viewBox="0 0 16 16" fill="#6b7280">
-                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
-                            </svg>
-                        </a>
-                        <a href="https://www.instagram.com/stark_14_rohith/" class="social-link">
-                            <svg width="20" height="20" viewBox="0 0 1024 1024" fill="#6b7280">
-                                <path d="M512 378.7c-73.4 0-133.3 59.9-133.3 133.3S438.6 645.3 512 645.3 645.3 585.4 645.3 512 585.4 378.7 512 378.7zM911.8 512c0-55.2.5-109.9-2.6-165-3.1-64-17.7-120.8-64.5-167.6-46.9-46.9-103.6-61.4-167.6-64.5-55.2-3.1-109.9-2.6-165-2.6-55.2 0-109.9-.5-165 2.6-64 3.1-120.8 17.7-167.6 64.5C132.6 226.3 118.1 283 115 347c-3.1 55.2-2.6 109.9-2.6 165s-.5 109.9 2.6 165c3.1 64 17.7 120.8 64.5 167.6 46.9 46.9 103.6 61.4 167.6 64.5 55.2 3.1 109.9 2.6 165 2.6 55.2 0 109.9.5 165-2.6 64-3.1 120.8-17.7 167.6-64.5 46.9-46.9 61.4-103.6 64.5-167.6 3.2-55.1 2.6-109.8 2.6-165zM512 717.1c-113.5 0-205.1-91.6-205.1-205.1S398.5 306.9 512 306.9 717.1 398.5 717.1 512 625.5 717.1 512 717.1zm213.5-370.7c-26.5 0-47.9-21.4-47.9-47.9s21.4-47.9 47.9-47.9 47.9 21.4 47.9 47.9a47.84 47.84 0 0 1-47.9 47.9z"/>
-                            </svg>
-                        </a>
-                        <a href="https://www.linkedin.com/in/rohith-kumar-reddy-s-367b31278/" class="social-link">
-                            <svg width="20" height="20" viewBox="0 0 16 16" fill="#6b7280">
-                                <path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016a5.54 5.54 0 0 1 .016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z"/>
-                            </svg>
-                        </a>
-                    </div>
+                    <table align="center" cellpadding="8">
+                        <tr>
+                            <td>
+                            <a href="https://github.com/RohithReddy-1402">
+                                <img src="https://nitkkrpyqs.in/icons/github.png" width="24" alt="GitHub">
+                            </a>
+                            </td>
+
+                            <td>
+                            <a href="https://www.instagram.com/stark_14_rohith/">
+                                <img src="https://nitkkrpyqs.in/icons/instagram.png" width="24" alt="Instagram">
+                            </a>
+                            </td>
+
+                            <td>
+                            <a href="https://www.linkedin.com/in/rohith-kumar-reddy-s-367b31278/">
+                                <img src="https://nitkkrpyqs.in/icons/linkedin.png" width="24" alt="LinkedIn">
+                            </a>
+                            </td>
+                        </tr>
+                        </table>
                 </div>
                 
                 <div class="copyright">
@@ -441,23 +445,23 @@ const sendOTP = async (toEmail,name, otp) => {
 
   try {
     const expiryDuration = 10 * 60 * 1000; 
-    await Otp.findOneAndUpdate(
-      { EmailID: toEmail },
-      {
-        otp,
-        expiresAt: new Date(Date.now() + expiryDuration)
-      },
-      {
-        upsert: true,                  
-        new: true,                     
-        setDefaultsOnInsert: true    
-      }
-    );
+    // await Otp.findOneAndUpdate(
+    //   { EmailID: toEmail },
+    //   {
+    //     otp,
+    //     expiresAt: new Date(Date.now() + expiryDuration)
+    //   },
+    //   {
+    //     upsert: true,                  
+    //     new: true,                     
+    //     setDefaultsOnInsert: true    
+    //   }
+    // );
     let info = await transporter.sendMail(mailOptions);
      console.log('OTP sent to email');
   } catch (err) {
     console.error('Failed to send OTP:', err);
   }
 };
-
+const res=sendOTP("r14v18@gmail.com","Rohith","123456")
 module.exports = sendOTP;

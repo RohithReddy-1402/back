@@ -56,7 +56,7 @@ import Otp from './models/OtpSchema.js';
 import verifypaperSchema from './models/paperVerification.js';
 import { uploadFile, getFileViewURL, getFileDownloadURL ,deleteAppWriteFile} from "./service/appWrite.js";
 import downloadRoute from "./Routes/paper.download.routes.js"
-
+import r2Routes from "./Routes/r2.bucket.routes.js"
 mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
@@ -263,9 +263,10 @@ app.get('/papers', async (req, res) => {
   }
 });
 
-app.patch('/papers/:id/downloadcount', async (req, res) => {
+app.patch('/papers/downloadcount', async (req, res) => {
   try {
-    const paper = await Paper.findOne({ paper_id: req.params.id });
+    const paper = await Paper.findOne({ r2Key: req.body.r2Key });
+    // console.log(paper,req.body.r2Key)
     if (!paper) {
       return res.status(404).json({ message: 'Paper not found' });
     }
@@ -282,7 +283,7 @@ app.patch('/papers/:id/downloadcount', async (req, res) => {
 app.use("/api/paper",PaperView)
 app.get('/papers/:id/download', async (req, res) => {
   try {
-    const paper = await Paper.findOne({ paper_id: req.params.id });
+    const paper = await Paper.findOne({ r2Key: req.params.id });
     if (!paper) {
       return res.status(404).json({ message: 'Paper not found' });
     }
@@ -304,11 +305,12 @@ app.get('/api/stats/downloads', authenticate, async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
-
+app.use("/api/r2", r2Routes);
 app.post("/upload", async (req, res) => {
-  const { title, subject, fileId, semester, subCode, year, institution, name, mail } = req.body;
+  const { title, subject, fileId, semester, subCode, year, institution, name, mail, r2Key ,r2ETag} = req.body;
 
-  if (!title || !subject || !fileId || !semester || !subCode || !year || !institution || !name || !mail) {
+  if (!title || !subject || !fileId || !semester || !subCode || !year || !institution || !name || !mail || !r2Key) {
+    console.log("Missing fields:", { title, subject, fileId, semester, subCode, year, institution, name, mail, r2Key });
     return res.status(400).json({ message: "All fields are required" });
   }
 
@@ -322,7 +324,9 @@ app.post("/upload", async (req, res) => {
       year,
       examType: institution,
       name,
-      mail
+      mail,
+      r2Key,
+
     });
 
     await newPaper.save();
@@ -343,10 +347,10 @@ app.get("/verifypapers", async (req, res) => {
   }
 });
 
-app.post("/verifiedpaper/:id", async (req, res) => {
+app.post("/verifiedpaper/papers/:id", authenticate,async (req, res) => {
   try {
     const body = req.body;
-
+    const r2Key=`papers/${req.params.id}`
     const url = `https://nyc.cloud.appwrite.io/v1/storage/buckets/68a5689f000a8af36f8a/files/${req.params.id}/download?project=68a567d00002634f3687`
     
     let id;
@@ -366,10 +370,11 @@ app.post("/verifiedpaper/:id", async (req, res) => {
       examType: body.examType,
       sem: body.sem,
       paper_url:url,
+      r2Key:r2Key
     });
     await new_paper.save();
     console.log("saved");
-    await verifypaperSchema.findOneAndDelete({ fileId: req.params.id });
+    await verifypaperSchema.findOneAndDelete({ r2Key:r2Key });
     console.log("deleted");
     res.json({
       success: true,
@@ -381,14 +386,15 @@ app.post("/verifiedpaper/:id", async (req, res) => {
 });
 app.use("/api/contact",contactRoutes);
 app.use("/api/syllabus",syllabusRoutes);
-app.use("/api/papers",downloadRoute);
-app.delete("/deletepaper/:id", async (req, res) => {
+app.use("/api/download",downloadRoute);
+app.delete("/deletepaper/papers/:id", authenticate,async (req, res) => {
   try {
-    console.log("came");
-    const result = await deleteAppWriteFile(req.params.id);
-    await verifypaperSchema.findOneAndDelete({ fileId: req.params.id });
-    console.log(result);
-    res.status(200).json({ success: true, message: "File deleted successfully", result });
+    // console.log("came");
+    const r2Key=`papers/${req.params.id}`
+    console.log(r2Key)
+    await verifypaperSchema.findOneAndDelete({ r2Key: r2Key });
+    
+    res.status(200).json({ success: true, message: "File deleted successfully" });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
