@@ -2,6 +2,8 @@ import express from "express";
 import { PDFDocument, rgb, degrees, StandardFonts } from "pdf-lib";
 import { Client, Storage } from "node-appwrite";
 import Paper from '../models/PaperSchema.js';
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import r2 from "../config/r2.config.js"
 const router = express.Router();
 
 const client = new Client()
@@ -10,66 +12,86 @@ const client = new Client()
 
 const storage = new Storage(client);
 
-router.get("/download/:fileId", async (req, res) => {
-    // console.log("!")
+router.get("/papers/:id", async (req, res) => {
+    console.log("!")
     try {
 
-        const fileId = req.params.fileId;
+        const fileId = `papers/${req.params.id}`
+        console.log(fileId)
+        // const pdfBuffer = await storage.getFileDownload(
+        //     "68a5689f000a8af36f8a",
+        //     fileId
+        // );
 
-        const pdfBuffer = await storage.getFileDownload(
-            "68a5689f000a8af36f8a",
-            fileId
-        );
+        // const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-        const pdfDoc = await PDFDocument.load(pdfBuffer);
+        // const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-        const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        // const pages = pdfDoc.getPages();
 
-        const pages = pdfDoc.getPages();
+        // for (const page of pages) {
 
-        for (const page of pages) {
+        //     const { width, height } = page.getSize();
 
-            const { width, height } = page.getSize();
+        //     const minDimension = Math.min(width, height);
+        //     const fontSize = minDimension * 0.08; 
+        //     const angle=Math.atan(height/width)*(180/Math.PI);
+        //     console.log(width,height,angle)
+        //     const textWidth = font.widthOfTextAtSize("NITKKRPYQS.IN", fontSize);
 
-            const minDimension = Math.min(width, height);
-            const fontSize = minDimension * 0.08; 
-            const angle=Math.atan(height/width)*(180/Math.PI);
-            console.log(width,height,angle)
-            const textWidth = font.widthOfTextAtSize("NITKKRPYQS.IN", fontSize);
+        //     const x = (width/2 -(textWidth/2)*Math.cos(angle)) ;
+        //     const y = (height/2+(textWidth/2)*Math.sin(angle)) ;
 
-            const x = (width/2 -(textWidth/2)*Math.cos(angle)) ;
-            const y = (height/2+(textWidth/2)*Math.sin(angle)) ;
+        //     page.drawText("NITKKRPYQS.IN", {
+        //         x,
+        //         y,
+        //         size: fontSize,
+        //         font,
+        //         rotate: degrees(angle),
+        //         opacity: 0.30,
+        //         color: rgb(0.5, 0.5, 0.5),
+        //     });
 
-            page.drawText("NITKKRPYQS.IN", {
-                x,
-                y,
-                size: fontSize,
-                font,
-                rotate: degrees(angle),
-                opacity: 0.30,
-                color: rgb(0.5, 0.5, 0.5),
-            });
+        //     page.drawText("Downloaded from nitkkrpyqs.in", {
 
-            page.drawText("Downloaded from nitkkrpyqs.in", {
+        //         x: 20,
 
-                x: 20,
+        //         y: 20,
 
-                y: 20,
+        //         size: 10,
 
-                size: 10,
+        //         font,
 
-                font,
+        //         opacity: 0.7,
 
-                opacity: 0.7,
+        //         color: rgb(0, 0, 0)
 
-                color: rgb(0, 0, 0)
+        //     });
 
-            });
+        // }
+        // if (!fileId) {
+        //     return res.status(404).json({
+        //         message: "Paper not found",
+        //     });
+        // }
+        console.log("rohith")
+        const command = new GetObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: fileId,
+        });
 
+        const response = await r2.send(command);
+
+        const chunks = [];
+
+        for await (const chunk of response.Body) {
+        chunks.push(chunk);
         }
+
+        const pdfBuffer = Buffer.concat(chunks);
         let fileName="";
         try {
-            const paper = await Paper.findOne({ paper_id: fileId });
+            const paper = await Paper.findOne({ r2Key: fileId });
             if (!paper) {
               return res.status(404).json({ message: 'Paper not found' });
             }
@@ -77,7 +99,6 @@ router.get("/download/:fileId", async (req, res) => {
           } catch (error) {
             return res.status(500).json({ message: 'Server error', error: error.message });
           }
-        const bytes = await pdfDoc.save();
 
         res.setHeader("Content-Type", "application/pdf");
 
@@ -86,7 +107,7 @@ router.get("/download/:fileId", async (req, res) => {
             `attachment; filename=${fileName}.pdf`
         );
 
-        res.send(Buffer.from(bytes));
+        res.send(pdfBuffer);
 
     } catch (err) {
 
