@@ -1,22 +1,11 @@
-const nodemailer = require('nodemailer');
-require('dotenv').config();
-
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-  debug: true,
-  logger: true,
-});
+const transporter = require('./mailTransporter');
 
 const sendThankYou = async (paper) => {
   const { mail: toEmail, name, paperName } = paper;
   const formattedTime = new Date().toLocaleString();
 
   const mailOptions = {
-    from: `"NIT KKR Question Paper Website" <${process.env.GMAIL_USER}>`,
+    from: `"NIT KKR Question Paper Website" <${process.env.EMAIL_FROM}>`,
     to: toEmail,
     subject: 'Thank You for Your Contribution!',
     html: `
@@ -415,7 +404,4 @@ const sendThankYou = async (paper) => {
   }
 };
 
-// module.exports = sendThankYou;
-
-const res=sendThankYou({mail:"r14v18@gmail.com",name:"Rohith",paperName:"English"});
-console.log(res);
+module.exports = sendThankYou;

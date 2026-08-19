@@ -24,7 +24,9 @@ const allowedOrigins = [
   'https://nitkkrpreviouspapers.vercel.app',
   'http://nitkkrpreviouspapers.vercel.app',
   'https://nitkkrpyqs.in',
-  'https://www.nitkkrpyqs.in'
+  'https://www.nitkkrpyqs.in',
+  'http://172.16.168.131:8081',
+  'http://localhost:8081'
 ];
 const corsOptions = {
   origin: function (origin, callback) {
@@ -57,6 +59,7 @@ import verifypaperSchema from './models/paperVerification.js';
 import { uploadFile, getFileViewURL, getFileDownloadURL ,deleteAppWriteFile} from "./service/appWrite.js";
 import downloadRoute from "./Routes/paper.download.routes.js"
 import r2Routes from "./Routes/r2.bucket.routes.js"
+import { queuePaperApproval, startPaperMailScheduler } from "./services/paperMailQueue.service.js"
 mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
@@ -71,9 +74,9 @@ app.use((req, res, next) => {
 });
 const authenticate = (req, res, next) => {
     
-
+  // console.log("req.headers.cookie", req.headers.cookie);
   const token = req.headers.cookie?.slice(6);
-  
+  // console.log("token", token);
   if (!token) {
 
     return res.status(401).json({ message: 'Authentication required' });
@@ -81,9 +84,14 @@ const authenticate = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     req.user = decoded;
+    console.log("decoded", decoded);
     next();
   } catch (error) {
+     console.error("JWT VERIFY ERROR:");
+  console.error(error.name);
+  console.error(error.message);
     return res.status(401).json({ message: 'Invalid token' });
   }
 };
@@ -244,6 +252,33 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
+app.post('/login/google', async (req, res) => {
+  try {
+    const { EmailID} = req.body;
+
+    const user = await User.findOne({ EmailID });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials, no email' });
+    }
+    const token = setUser(user);
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: '/'
+    })
+      .status(200)
+      .json({
+        user: {
+          EmailID: user.EmailID,
+          username: user.name,
+        },
+      });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
 app.post('/logout', (req, res) => {
   console.log(req.cookies);
   res.clearCookie('token', {
@@ -374,8 +409,24 @@ app.post("/verifiedpaper/papers/:id", authenticate,async (req, res) => {
     });
     await new_paper.save();
     console.log("saved");
-    await verifypaperSchema.findOneAndDelete({ r2Key:r2Key });
+    const deletedPending = await verifypaperSchema.findOneAndDelete({ r2Key:r2Key });
     console.log("deleted");
+
+    if (deletedPending?.mail) {
+      queuePaperApproval({
+        mail: deletedPending.mail,
+        name: deletedPending.name,
+        paper: {
+          title: body.title,
+          subject: body.subject,
+          sem: body.sem,
+          subjectCode: body.subjectCode,
+          year: body.year,
+          examType: body.examType,
+        },
+      }).catch((err) => console.error("Failed to queue approval mail:", err.message));
+    }
+
     res.json({
       success: true,
       url: url
@@ -403,3 +454,4 @@ app.delete("/deletepaper/papers/:id", authenticate,async (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+startPaperMailScheduler();
