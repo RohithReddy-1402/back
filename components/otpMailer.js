@@ -1,15 +1,5 @@
-const nodemailer = require('nodemailer');
 // const Otp=require('../models/OtpSchema')
-require('dotenv').config();
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,        
-    pass: process.env.GMAIL_PASS,
-  },
-  debug:true,
-  logger:true,
-});
+const transporter = require('./mailTransporter');
 const expiryTime = new Date(Date.now() + 10 * 60000);
 const formattedTime = expiryTime.toLocaleString('en-IN', {
   hour: '2-digit', minute: '2-digit', hour12: true, day: 'numeric', month: 'short', year: 'numeric'
@@ -18,7 +8,7 @@ const formattedTime = expiryTime.toLocaleString('en-IN', {
 const sendOTP = async (toEmail,name, otp) => {
   otp = otp.toString();
   const mailOptions = {
-    from: `"NIT KKR Question Paper Website" <${process.env.GMAIL_USER}>`,
+    from: `"NIT KKR Question Paper Website" <${process.env.EMAIL_FROM}>`,
     to: toEmail,
     subject: 'OTP for reseting password',
     html: `
@@ -343,9 +333,7 @@ const sendOTP = async (toEmail,name, otp) => {
                 </a>
                 
                 <div class="email-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
-                        <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8l8 5 8-5v10zm-8-7L4 6h16l-8 5z"/>
-                    </svg>
+                    <img src="https://nitkkrpyqs.in/icon.png" />
                 </div>
                 
                 <div class="header-title">Thanks for signing up!</div>
@@ -363,7 +351,7 @@ const sendOTP = async (toEmail,name, otp) => {
                 <div class="otp-container">
                     <div class="otp-label">Your Verification Code</div>
                     <div class="otp-digits">
-                        <div class="otp-digit"><p>${otp?otp[0]:'0'}</p></div>
+                        <div class="otp-digit">${otp?otp[0]:'0'}</div>
                         <div class="otp-digit"><p>${otp ? otp[1] : '0'}</p></div>
                         <div class="otp-digit"><p>${otp ? otp[2] : '0'}</p></div>
                         <div class="otp-digit"><p>${otp ? otp[3] : '0'}</p></div>
@@ -386,7 +374,7 @@ const sendOTP = async (toEmail,name, otp) => {
                 <div class="signature">
                     <div class="signature-text">
                         Best regards,<br>
-                        <span class="signature-name">Rohith Kumar Reddy</span><br>
+                        <span class="signature-name">Admin</span><br>
                         <span style="color: #6b7280; font-size: 14px;">NIT KKR Previous Papers Team</span>
                     </div>
                 </div>
@@ -409,27 +397,29 @@ const sendOTP = async (toEmail,name, otp) => {
                     <a href="tel:+91-798-112-1103" class="contact-item">📞 +91-798-112-1103</a>
                     <a href="mailto:nitkkrpreviouspapers@gmail.com" class="contact-item">✉️ nitkkrpreviouspapers@gmail.com</a>
                     
-                    <table align="center" cellpadding="8">
+                    <div class="social-links">
+                        <table align="center" cellpadding="8">
                         <tr>
                             <td>
                             <a href="https://github.com/RohithReddy-1402">
-                                <img src="https://nitkkrpyqs.in/icons/github.png" width="24" alt="GitHub">
+                                <img src="https://back-6j6v.onrender.com/public/icons/github.png" width="24" alt="GitHub">
                             </a>
                             </td>
 
                             <td>
                             <a href="https://www.instagram.com/stark_14_rohith/">
-                                <img src="https://nitkkrpyqs.in/icons/instagram.png" width="24" alt="Instagram">
+                                <img src="https://back-6j6v.onrender.com/public/icons/instagram.png" width="24" alt="Instagram">
                             </a>
                             </td>
 
                             <td>
                             <a href="https://www.linkedin.com/in/rohith-kumar-reddy-s-367b31278/">
-                                <img src="https://nitkkrpyqs.in/icons/linkedin.png" width="24" alt="LinkedIn">
+                                <img src="https://back-6j6v.onrender.com/public/icons/linkedin.png" width="24" alt="LinkedIn">
                             </a>
                             </td>
                         </tr>
                         </table>
+                    </div>
                 </div>
                 
                 <div class="copyright">
@@ -463,5 +453,4 @@ const sendOTP = async (toEmail,name, otp) => {
     console.error('Failed to send OTP:', err);
   }
 };
-const res=sendOTP("r14v18@gmail.com","Rohith","123456")
 module.exports = sendOTP;

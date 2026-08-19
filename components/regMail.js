@@ -1,19 +1,8 @@
-const nodemailer = require('nodemailer');
-require('dotenv').config();
-const transporter=nodemailer.createTransport({
-    service: 'gmail',
-    secure:true,
-  auth: {
-    user: process.env.GMAIL_USER,        
-    pass: process.env.GMAIL_PASS,
-  },
-  debug:true,
-  logger:true,
-})
+const transporter = require('./mailTransporter');
 
 const sendRegMail = async (email,name) => {
     const mailOptions = {
-        from: process.env.GMAIL_USER, 
+        from: `"NIT KKR Question Paper Website" <${process.env.EMAIL_FROM}>`,
         to: email,
         subject: '[NexSphere] Welcome ',
         html:`
