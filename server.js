@@ -252,7 +252,7 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
-aapp.post('/login/google', async (req, res) => {
+app.post('/login/google', async (req, res) => {
   try {
     const { EmailID, name } = req.body;
 
