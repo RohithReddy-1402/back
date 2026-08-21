@@ -110,7 +110,7 @@ app.post('/register', async (req, res) => {
 
     const existingUser = await User.findOne({ EmailID });
 
-    if (existingUser) {
+    if (existingUser && existingUser.pass.length>0) {
       return res.status(400).json({ message: 'Username or Email already exists' });
     }
     const salt = await bcrypt.genSalt(10);
@@ -220,7 +220,10 @@ app.post('/login', async (req, res) => {
     const { EmailID, pass } = req.body;
 
     const user = await User.findOne({ EmailID });
-    if (!user) {
+    if (!user ) {
+      return res.status(401).json({ message: 'Invalid credentials, no email' });
+    }
+    if (!user.pass || user.pass.length === 0) {
       return res.status(401).json({ message: 'Invalid credentials, no email' });
     }
 
@@ -228,11 +231,7 @@ app.post('/login', async (req, res) => {
     if (!isPasswordValid) {
       return res.status(402).json({ message: 'Invalid credentials, not correct pass' });
     }
-    // const token = jwt.sign(
-    //   { id: user._id, username: user.username, role: user.role },
-    //   JWT_SECRET,
-    //   { expiresIn: '1h' }
-    // );
+
     const token = setUser(user);
     res.cookie("token", token, {
       httpOnly: true,
@@ -243,6 +242,7 @@ app.post('/login', async (req, res) => {
     })
       .status(200)
       .json({
+        token,
         user: {
           EmailID: user.EmailID,
           username: user.name,
@@ -252,14 +252,21 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
-app.post('/login/google', async (req, res) => {
+aapp.post('/login/google', async (req, res) => {
   try {
-    const { EmailID} = req.body;
+    const { EmailID, name } = req.body;
 
-    const user = await User.findOne({ EmailID });
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials, no email' });
+    if (!EmailID) {
+      return res.status(400).json({ message: 'Email is required' });
     }
+
+    let user = await User.findOne({ EmailID });
+
+    if (!user) {
+      user = new User({ name: name || EmailID, EmailID});
+      await user.save();
+    }
+
     const token = setUser(user);
     res.cookie("token", token, {
       httpOnly: true,
@@ -270,6 +277,7 @@ app.post('/login/google', async (req, res) => {
     })
       .status(200)
       .json({
+        token,
         user: {
           EmailID: user.EmailID,
           username: user.name,
