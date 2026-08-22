@@ -220,7 +220,7 @@ app.post('/login', async (req, res) => {
     const { EmailID, pass } = req.body;
 
     const user = await User.findOne({ EmailID });
-    console.lof(EmailID,pass,user);
+    console.log(EmailID,pass,user);
     if (!user ) {
       return res.status(401).json({ message: 'Invalid credentials, no user' });
     }
