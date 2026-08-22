@@ -220,8 +220,9 @@ app.post('/login', async (req, res) => {
     const { EmailID, pass } = req.body;
 
     const user = await User.findOne({ EmailID });
+    console.lof(EmailID,pass,user);
     if (!user ) {
-      return res.status(401).json({ message: 'Invalid credentials, no email' });
+      return res.status(401).json({ message: 'Invalid credentials, no user' });
     }
     if (!user.pass || user.pass.length === 0) {
       return res.status(401).json({ message: 'Invalid credentials, no email' });
