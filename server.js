@@ -13,9 +13,15 @@ import { v2 as cloudinary } from "cloudinary";
 import { setUser, getUser } from './service/auth.js';
 import axios from "axios";
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import contactRoutes from "./Routes/contact.routes.js";
 import syllabusRoutes from "./Routes/syllabus.route.js";
+import optionalAuth, { extractToken } from "./middleware/optionalAuth.js";
+import downloadRateLimit from "./middleware/downloadRateLimit.js";
+import { getPapersWithCounts, invalidatePapersCache } from "./services/papersCache.service.js";
+import { incrementDownload, readPendingCounts, startDownloadCounterScheduler } from "./services/downloadCounter.service.js";
 const app = express();
+app.set('trust proxy', 1);
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
@@ -38,6 +44,8 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', "PATCH", 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset', 'Retry-After'],
 };
 
 cloudinary.config({
@@ -49,6 +57,7 @@ cloudinary.config({
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(express.json());
+app.use(cookieParser());
 import sendOTP from './components/otpMailer.js';
 import sendRegMailer from './components/regMail.js';
 import PaperView from "./Routes/paperview.routes.js"
@@ -73,10 +82,9 @@ app.use((req, res, next) => {
   next();
 });
 const authenticate = (req, res, next) => {
-    
-  // console.log("req.headers.cookie", req.headers.cookie);
-  const token = req.headers.cookie?.slice(6);
-  // console.log("token", token);
+
+  // Accepts `Authorization: Bearer <jwt>` (primary) or the `token` cookie.
+  const token = extractToken(req);
   if (!token) {
 
     return res.status(401).json({ message: 'Authentication required' });
@@ -119,7 +127,22 @@ app.post('/register', async (req, res) => {
     await user.save();
 
     console.log(user);
-    res.status(201).json({ message: 'User registered successfully' });
+    const token = setUser(user);
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: '/'
+    })
+      .status(200)
+      .json({
+        token,
+        user: {
+          EmailID: user.EmailID,
+          username: user.name,
+        },
+      });
     sendRegMailer(EmailID, name);
 
   } catch (error) {
@@ -127,28 +150,53 @@ app.post('/register', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
-app.post('/forgotpassword', async (req, res) => {
+app.post("/forgotpassword", async (req, res) => {
   try {
-
     const { EmailID } = req.body;
-    console.log(req.body);
+
     const user = await User.findOne({ EmailID });
+
     if (!user) {
-      return res.status(401).json({ message: "Email Doesn't Exist" });
+      return res.status(401).json({
+        message: "Email Doesn't Exist",
+      });
     }
     if (user.otp_verified) {
-      return res.status(208).json({ message: "Otp Already Verified" });
+      return res.status(208).json({
+        message: "Otp Already Verified",
+      });
     }
-    const otp = Math.floor(100000 + Math.random() * 900000);
-    const response = sendOTP(EmailID, user.name, otp);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    return res.status(200).json({ message: "Otp Sent" });
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
+    await Otp.findOneAndUpdate(
+      { EmailID },
+      {
+        EmailID,
+        otp,
+        expiresAt,
+      },
+      {
+        upsert: true,
+        new: true,
+      }
+    );
+
+    await sendOTP(EmailID, user.name, otp);
+
+    return res.status(200).json({
+      message: "Otp Sent",
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      message: "Server Error",
+    });
   }
-  catch (err) {
-    res.status(400).json({ message: "Server Error" })
-  }
-})
+});
 app.get('/auth/check', authenticate, (req, res) => {
   res.status(200).json({
     user: {
@@ -300,14 +348,14 @@ app.post('/logout', (req, res) => {
 })
 app.get('/papers', async (req, res) => {
   try {
-    const papers = await Paper.find();
+    const papers = await getPapersWithCounts();
     res.json(papers);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-app.patch('/papers/downloadcount', async (req, res) => {
+app.patch('/papers/downloadcount', optionalAuth, ...downloadRateLimit, async (req, res) => {
   try {
     const paper = await Paper.findOne({ r2Key: req.body.r2Key });
     // console.log(paper,req.body.r2Key)
@@ -315,8 +363,7 @@ app.patch('/papers/downloadcount', async (req, res) => {
       return res.status(404).json({ message: 'Paper not found' });
     }
 
-    paper.downloads++;
-    await paper.save();
+    incrementDownload(paper.r2Key).catch((e) => console.error("count failed:", e.message));
 
     res.redirect(paper.paper_url);
   } catch (error) {
@@ -325,12 +372,13 @@ app.patch('/papers/downloadcount', async (req, res) => {
 });
 
 app.use("/api/paper",PaperView)
-app.get('/papers/:id/download', async (req, res) => {
+app.get('/papers/:id/download', optionalAuth, ...downloadRateLimit, async (req, res) => {
   try {
     const paper = await Paper.findOne({ r2Key: req.params.id });
     if (!paper) {
       return res.status(404).json({ message: 'Paper not found' });
     }
+    incrementDownload(paper.r2Key).catch((e) => console.error("count failed:", e.message));
     res.redirect(paper.paper_url);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -343,8 +391,16 @@ app.get('/api/stats/downloads', authenticate, async (req, res) => {
       return res.status(403).json({ message: 'Forbidden: Admin access required' });
     }
 
-    const papers = await Paper.find({}, 'title downloadCount').sort('-downloadCount');
-    res.json(papers);
+    const papers = await Paper.find({}, 'title downloads r2Key').lean();
+    const pending = await readPendingCounts();
+    const withDeltas = papers
+      .map((p) => ({
+        _id: p._id,
+        title: p.title,
+        downloads: (p.downloads || 0) + (pending[p.r2Key] || 0),
+      }))
+      .sort((a, b) => b.downloads - a.downloads);
+    res.json(withDeltas);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -418,6 +474,7 @@ app.post("/verifiedpaper/papers/:id", authenticate,async (req, res) => {
     });
     await new_paper.save();
     console.log("saved");
+    await invalidatePapersCache();
     const deletedPending = await verifypaperSchema.findOneAndDelete({ r2Key:r2Key });
     console.log("deleted");
 
@@ -464,3 +521,4 @@ app.delete("/deletepaper/papers/:id", authenticate,async (req, res) => {
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 startPaperMailScheduler();
+startDownloadCounterScheduler();

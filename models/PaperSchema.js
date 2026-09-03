@@ -14,4 +14,6 @@ const paperSchema = new mongoose.Schema({
   migratedToR2: {type: Boolean, default: false,},
   migratedAt: {type: Date,default: null,},
 });
+paperSchema.index({ r2Key: 1 });
+paperSchema.index({ paper_id: 1 });
 export default mongoose.model("papers", paperSchema);

@@ -1,6 +1,8 @@
 import express from "express";
 import { getFileViewURL} from "../service/appWrite.js";
 import Paper from "../models/PaperSchema.js"
+import optionalAuth from "../middleware/optionalAuth.js";
+import downloadRateLimit from "../middleware/downloadRateLimit.js";
 const router =express.Router();
 // router.get("/view/:fielId",async(req,res)=>{
 //   const fileId=req.params.fielId;
@@ -28,7 +30,7 @@ const router =express.Router();
 //     });
 // }
 // })
-router.get("/view/:fielId", (req, res) => {
+router.get("/view/:fielId", optionalAuth, ...downloadRateLimit, (req, res) => {
     console.log("URL:", req.originalUrl);
     console.log("Params:", req.params);
     console.log("Headers:", req.headers.referer);
