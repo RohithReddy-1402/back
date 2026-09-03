@@ -3,7 +3,8 @@ function setUser(user){
     return jwt.sign({id:user._id,
         EmailID: user.EmailID,
         username: user.name,
-        role: user.role
+        role: user.role,
+        premium: user.premium || false
     }, process.env.JWT_SECRET, { expiresIn: "30d" });
 }
 function getUser(token){

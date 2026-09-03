@@ -4,6 +4,9 @@ import { Client, Storage } from "node-appwrite";
 import Paper from '../models/PaperSchema.js';
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import r2 from "../config/r2.config.js"
+import optionalAuth from "../middleware/optionalAuth.js";
+import downloadRateLimit from "../middleware/downloadRateLimit.js";
+import { incrementDownload } from "../services/downloadCounter.service.js";
 const router = express.Router();
 
 const client = new Client()
@@ -12,7 +15,7 @@ const client = new Client()
 
 const storage = new Storage(client);
 
-router.get("/papers/:id", async (req, res) => {
+router.get("/papers/:id", optionalAuth, ...downloadRateLimit, async (req, res) => {
     console.log("!")
     try {
 
@@ -108,6 +111,8 @@ router.get("/papers/:id", async (req, res) => {
         );
 
         res.send(pdfBuffer);
+
+        incrementDownload(fileId).catch((e) => console.error("count failed:", e.message));
 
     } catch (err) {
 
