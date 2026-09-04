@@ -1,4 +1,4 @@
-import { redis, redisEnabled } from "../config/redis.js";
+import { redis, redisEnabled, isRedisReady, withTimeout } from "../config/redis.js";
 import Paper from "../models/PaperSchema.js";
 import { PENDING_HASH, PAPERS_CACHE_KEY } from "./cacheKeys.js";
 
@@ -18,9 +18,9 @@ const FLUSH_MS = Number(process.env.DOWNLOAD_FLUSH_SECONDS || 60) * 1000;
 /** Increment the download count for a paper (by r2Key). */
 export const incrementDownload = async (r2Key) => {
   if (!r2Key) return;
-  if (redisEnabled) {
+  if (isRedisReady()) {
     try {
-      await redis.hincrby(PENDING_HASH, r2Key, 1);
+      await withTimeout(redis.hincrby(PENDING_HASH, r2Key, 1));
       return;
     } catch (err) {
       console.error("incrementDownload: Redis failed, writing Mongo:", err.message);
@@ -35,9 +35,9 @@ export const incrementDownload = async (r2Key) => {
 
 /** Current pending (not-yet-flushed) counts as a plain object { r2Key: n }. */
 export const readPendingCounts = async () => {
-  if (!redisEnabled) return {};
+  if (!isRedisReady()) return {};
   try {
-    const raw = await redis.hgetall(PENDING_HASH);
+    const raw = await withTimeout(redis.hgetall(PENDING_HASH));
     const out = {};
     for (const [key, val] of Object.entries(raw || {})) {
       const n = Number(val);
@@ -52,7 +52,7 @@ export const readPendingCounts = async () => {
 
 /** Flush pending counts into Mongo and zero them out in Redis. */
 export const flushDownloadCounts = async () => {
-  if (!redisEnabled) return;
+  if (!isRedisReady()) return;
   let pending;
   try {
     pending = await redis.hgetall(PENDING_HASH);

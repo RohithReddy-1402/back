@@ -1,4 +1,4 @@
-import { redis, redisEnabled } from "../config/redis.js";
+import { redis, isRedisReady, withTimeout } from "../config/redis.js";
 import Paper from "../models/PaperSchema.js";
 import { readPendingCounts } from "./downloadCounter.service.js";
 import { PAPERS_CACHE_KEY } from "./cacheKeys.js";
@@ -27,16 +27,18 @@ const mergeCounts = (papers, pending) =>
 
 /** Paper list with download counts reconciled against Redis. */
 export const getPapersWithCounts = async () => {
-  if (!redisEnabled) return fetchFromMongo();
+  if (!isRedisReady()) return fetchFromMongo();
 
   let base;
   try {
-    const cached = await redis.get(PAPERS_CACHE_KEY);
+    const cached = await withTimeout(redis.get(PAPERS_CACHE_KEY));
     if (cached) {
       base = JSON.parse(cached);
     } else {
       base = await fetchFromMongo();
-      await redis.set(PAPERS_CACHE_KEY, JSON.stringify(base), "EX", TTL_SECONDS);
+      redis
+        .set(PAPERS_CACHE_KEY, JSON.stringify(base), "EX", TTL_SECONDS)
+        .catch((e) => console.error("papers cache set failed:", e.message));
     }
   } catch (err) {
     console.error("getPapersWithCounts: cache path failed, using Mongo:", err.message);
@@ -49,9 +51,9 @@ export const getPapersWithCounts = async () => {
 
 /** Drop the cached catalogue (call after a paper is added/removed/edited). */
 export const invalidatePapersCache = async () => {
-  if (!redisEnabled) return;
+  if (!isRedisReady()) return;
   try {
-    await redis.del(PAPERS_CACHE_KEY);
+    await withTimeout(redis.del(PAPERS_CACHE_KEY));
   } catch (err) {
     console.error("invalidatePapersCache failed:", err.message);
   }

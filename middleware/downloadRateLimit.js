@@ -1,6 +1,4 @@
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
-import { RedisStore } from "rate-limit-redis";
-import { redis, redisEnabled } from "../config/redis.js";
 
 /**
  * Rate limiting for question-paper download endpoints.
@@ -9,21 +7,25 @@ import { redis, redisEnabled } from "../config/redis.js";
  * exceeded). Limits are configurable via env; defaults come from improvements.txt.
  *
  * Key: logged-in user id, else client IP (requires `app.set('trust proxy', 1)`).
- * Skip: any authenticated user, and any `premium` user — they are unlimited.
+ * Skip: any authenticated user (and `premium` users) — they are unlimited.
  *
- * When Redis is unavailable the limiter falls back to express-rate-limit's
- * in-memory store (fine for the current single Render instance).
+ * Store: express-rate-limit's default in-process memory store. The backend runs
+ * as a single Render instance, so a shared (Redis) store buys nothing here and
+ * only adds a network dependency, a cold-start race with the store's Lua script,
+ * and request stalls during a Redis outage. Counts reset if the instance
+ * restarts — acceptable for an anti-abuse limit. (Redis is still used for the
+ * download counters and the /papers cache, where shared state matters.)
  */
 const PER_MIN = Number(process.env.DL_RATE_PER_MIN || 3);
 const PER_HOUR = Number(process.env.DL_RATE_PER_HOUR || 10);
 const PER_DAY = Number(process.env.DL_RATE_PER_DAY || 20);
 
-const keyGenerator = (req, res) =>
+const keyGenerator = (req) =>
   req.user?.id ? `u:${req.user.id}` : `ip:${ipKeyGenerator(req.ip)}`;
 
 const skip = (req) => Boolean(req.user) || Boolean(req.user?.premium);
 
-const makeLimiter = ({ windowMs, limit, prefix, message }) =>
+const makeLimiter = ({ windowMs, limit, message }) =>
   rateLimit({
     windowMs,
     limit,
@@ -31,14 +33,6 @@ const makeLimiter = ({ windowMs, limit, prefix, message }) =>
     skip,
     standardHeaders: true,
     legacyHeaders: false,
-    // a Redis outage must not turn a download into a 500 — allow the request
-    passOnStoreError: true,
-    store: redisEnabled
-      ? new RedisStore({
-          prefix,
-          sendCommand: (...args) => redis.call(...args),
-        })
-      : undefined,
     handler: (req, res) => {
       res.status(429).json({
         message,
@@ -51,19 +45,16 @@ const downloadRateLimit = [
   makeLimiter({
     windowMs: 60 * 1000,
     limit: PER_MIN,
-    prefix: "rl:1m:",
     message: `Too many downloads — max ${PER_MIN} per minute. Please slow down.`,
   }),
   makeLimiter({
     windowMs: 60 * 60 * 1000,
     limit: PER_HOUR,
-    prefix: "rl:1h:",
     message: `Hourly download limit reached (${PER_HOUR}/hour). Try again later or sign in.`,
   }),
   makeLimiter({
     windowMs: 24 * 60 * 60 * 1000,
     limit: PER_DAY,
-    prefix: "rl:1d:",
     message: `Daily download limit reached (${PER_DAY}/day). Sign in for unlimited downloads.`,
   }),
 ];
