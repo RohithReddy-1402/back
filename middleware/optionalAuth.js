@@ -20,7 +20,10 @@ const optionalAuth = (req, _res, next) => {
   const token = extractToken(req);
   if (token) {
     try {
+            console.log("optionalAuth: user authenticated:", req.user.id);
+
       req.user = jwt.verify(token, process.env.JWT_SECRET);
+      console.log("optionalAuth: user authenticated:", req.user.id);
     } catch {
       // ignore invalid/expired token — treat as anonymous
     }
