@@ -1,5 +1,8 @@
-import dotenv from "dotenv";
-dotenv.config();
+// Side-effect import so .env is loaded BEFORE any other import is evaluated.
+// (ES module imports are hoisted: a plain `dotenv.config()` statement here would
+// run only after config/redis.js, the rate limiter, etc. had already read
+// process.env and seen it empty.)
+import "dotenv/config";
 import express from 'express';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
@@ -358,14 +361,20 @@ app.get('/papers', async (req, res) => {
 app.patch('/papers/downloadcount', optionalAuth, ...downloadRateLimit, async (req, res) => {
   try {
     const paper = await Paper.findOne({ r2Key: req.body.r2Key });
-    // console.log(paper,req.body.r2Key)
     if (!paper) {
       return res.status(404).json({ message: 'Paper not found' });
     }
-
+    console.log("incrementing download for:", paper.r2Key);
     incrementDownload(paper.r2Key).catch((e) => console.error("count failed:", e.message));
 
-    res.redirect(paper.paper_url);
+    // Return JSON, not a 302 to Appwrite. The frontend calls this with fetch()
+    // and reads the body / RateLimit-* headers; a cross-origin redirect would be
+    // followed by fetch and then blocked by CORS ("Failed to fetch").
+    const remainingHeader = res.getHeader('RateLimit-Remaining');
+    res.json({
+      url: paper.paper_url,
+      remaining: remainingHeader === undefined ? null : Number(remainingHeader),
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
