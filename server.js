@@ -306,7 +306,17 @@ app.post('/login', async (req, res) => {
 });
 app.post('/login/google', async (req, res) => {
   try {
-    const { EmailID, name } = req.body;
+    let { EmailID, name } = req.body;
+
+    // The web frontend sends a Google Identity / Firebase ID token as
+    // `credential`. Both are JWTs carrying `email` and `name` claims. We decode
+    // (not verify) to stay compatible with the pre-existing trust model of this
+    // route — TODO: verify with google-auth-library / firebase-admin.
+    if (!EmailID && req.body.credential) {
+      const claims = jwt.decode(req.body.credential) || {};
+      EmailID = claims.email;
+      name = name || claims.name;
+    }
 
     if (!EmailID) {
       return res.status(400).json({ message: 'Email is required' });
