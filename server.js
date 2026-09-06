@@ -19,8 +19,11 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import contactRoutes from "./Routes/contact.routes.js";
 import syllabusRoutes from "./Routes/syllabus.route.js";
-import optionalAuth, { extractToken } from "./middleware/optionalAuth.js";
+import optionalAuth from "./middleware/optionalAuth.js";
+import authenticate from "./middleware/authenticate.js";
 import downloadRateLimit from "./middleware/downloadRateLimit.js";
+import emailVerificationRoutes from "./Routes/emailVerification.routes.js";
+import { requestEmailVerification } from "./services/emailVerification.service.js";
 import { getPapersWithCounts, invalidatePapersCache } from "./services/papersCache.service.js";
 import { incrementDownload, readPendingCounts, startDownloadCounterScheduler } from "./services/downloadCounter.service.js";
 const app = express();
@@ -84,28 +87,6 @@ app.use((req, res, next) => {
   );
   next();
 });
-const authenticate = (req, res, next) => {
-
-  // Accepts `Authorization: Bearer <jwt>` (primary) or the `token` cookie.
-  const token = extractToken(req);
-  if (!token) {
-
-    return res.status(401).json({ message: 'Authentication required' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    req.user = decoded;
-    console.log("decoded", decoded);
-    next();
-  } catch (error) {
-     console.error("JWT VERIFY ERROR:");
-  console.error(error.name);
-  console.error(error.message);
-    return res.status(401).json({ message: 'Invalid token' });
-  }
-};
 app.get('/ping', async (req, res) => {
   res.send("ok");
 })
@@ -144,9 +125,10 @@ app.post('/register', async (req, res) => {
         user: {
           EmailID: user.EmailID,
           username: user.name,
+          emailVerified: user.emailVerified,
         },
       });
-    sendRegMailer(EmailID, name);
+    requestEmailVerification(user, req);
 
   } catch (error) {
     console.error(error);
@@ -284,6 +266,14 @@ app.post('/login', async (req, res) => {
       return res.status(402).json({ message: 'Invalid credentials, not correct pass' });
     }
 
+    if (!user.emailVerified) {
+      return res.status(403).json({
+        message: 'Please verify your email before logging in.',
+        code: 'EMAIL_NOT_VERIFIED',
+        EmailID: user.EmailID,
+      });
+    }
+
     const token = setUser(user);
     res.cookie("token", token, {
       httpOnly: true,
@@ -323,10 +313,23 @@ app.post('/login/google', async (req, res) => {
     }
 
     let user = await User.findOne({ EmailID });
+    let isNewUser = false;
 
     if (!user) {
-      user = new User({ name: name || EmailID, EmailID});
+      isNewUser = true;
+      user = new User({ name: name || EmailID, EmailID, emailVerified: true, emailVerifiedAt: new Date() });
       await user.save();
+    } else if (!user.emailVerified) {
+      // A successful Google sign-in on this address is itself proof of
+      // ownership, even if the account originally registered with a password
+      // and never clicked the verification link.
+      user.emailVerified = true;
+      user.emailVerifiedAt = new Date();
+      await user.save();
+    }
+
+    if (isNewUser) {
+      sendRegMailer(user.EmailID, user.name);
     }
 
     const token = setUser(user);
@@ -520,6 +523,7 @@ app.post("/verifiedpaper/papers/:id", authenticate,async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+app.use("/api/email-verification", emailVerificationRoutes);
 app.use("/api/contact",contactRoutes);
 app.use("/api/syllabus",syllabusRoutes);
 app.use("/api/download",downloadRoute);
