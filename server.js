@@ -65,7 +65,6 @@ app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 import sendOTP from './components/otpMailer.js';
-import sendRegMailer from './components/regMail.js';
 import PaperView from "./Routes/paperview.routes.js"
 import User from './models/UserSchema.js';
 import Paper from './models/PaperSchema.js';
@@ -313,10 +312,8 @@ app.post('/login/google', async (req, res) => {
     }
 
     let user = await User.findOne({ EmailID });
-    let isNewUser = false;
 
     if (!user) {
-      isNewUser = true;
       user = new User({ name: name || EmailID, EmailID, emailVerified: true, emailVerifiedAt: new Date() });
       await user.save();
     } else if (!user.emailVerified) {
@@ -326,10 +323,6 @@ app.post('/login/google', async (req, res) => {
       user.emailVerified = true;
       user.emailVerifiedAt = new Date();
       await user.save();
-    }
-
-    if (isNewUser) {
-      sendRegMailer(user.EmailID, user.name);
     }
 
     const token = setUser(user);

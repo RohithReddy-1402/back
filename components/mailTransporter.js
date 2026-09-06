@@ -1,26 +1,22 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 require('dotenv').config();
-console.log("SMTP CONFIG:", {
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  user: process.env.SMTP_USER,
-  secure: Number(process.env.SMTP_PORT) === 465,
-  passExists: !!process.env.SMTP_PASS,
-});
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: Number(process.env.SMTP_PORT) === 465,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+
+if (!process.env.RESEND_API_KEY) {
+  console.error("RESEND_API_KEY is not set — mail sending will fail.");
+} else {
+  console.log("Resend mail client ready");
+}
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const transporter = {
+  sendMail: async ({ from, to, subject, html, text }) => {
+    const { data, error } = await resend.emails.send({ from, to, subject, html, text });
+    if (error) {
+      throw new Error(error.message || 'Resend send failed');
+    }
+    return data;
   },
-});
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("SMTP VERIFY FAILED:", error && error.message ? error.message : error);
-  } else {
-    console.log("SMTP SERVER READY");
-  }
-});
+};
+
 module.exports = transporter;
