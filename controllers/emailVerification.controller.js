@@ -6,7 +6,6 @@ import {
   consumeVerificationToken,
 } from "../services/emailVerification.service.js";
 import { subscribeToUser } from "../services/emailEvents.service.js";
-import sendRegMailer from "../components/regMail.js";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://nitkkrpyqs.in";
 const HEARTBEAT_MS = 20000;
@@ -36,9 +35,6 @@ export const resend = async (req, res) => {
 export const verify = async (req, res) => {
   const { token } = req.query;
   const result = await consumeVerificationToken(token);
-  if (result.status === "success") {
-    sendRegMailer(result.user.EmailID, result.user.name);
-  }
   res.redirect(`${FRONTEND_URL}/email-verification?status=${result.status}`);
 };
 
