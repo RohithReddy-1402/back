@@ -249,7 +249,7 @@ const sendVerificationMail = async (toEmail, name, verifyUrl) => {
         <div class="email-container">
             <!-- Header -->
             <div class="header">
-                <a href="https://nitkkrpreviouspapers.vercel.app" class="header-logo" style="text-decoration: none; color: white;">
+                <a href="https://nitkkrpyqs.in" class="header-logo" style="text-decoration: none; color: white;">
                     NIT KKR Previous Papers
                 </a>
 

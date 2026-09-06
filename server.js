@@ -119,7 +119,7 @@ app.post('/register', async (req, res) => {
       maxAge: 30 * 24 * 60 * 60 * 1000,
       path: '/'
     })
-      .status(200)
+      .status(201)
       .json({
         token,
         user: {
