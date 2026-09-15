@@ -1,129 +1,54 @@
 import express from "express";
-import { PDFDocument, rgb, degrees, StandardFonts } from "pdf-lib";
-import { Client, Storage } from "node-appwrite";
 import Paper from '../models/PaperSchema.js';
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-import r2 from "../config/r2.config.js"
-import optionalAuth from "../middleware/optionalAuth.js";
+import authenticate from "../middleware/authenticate.js";
+import requirePremiumOrQuota from "../middleware/requirePremiumOrQuota.js";
 import downloadRateLimit from "../middleware/downloadRateLimit.js";
 import { incrementDownload } from "../services/downloadCounter.service.js";
+import { logAccess } from "../services/downloadLog.service.js";
+import { generateAccessToken } from "../services/pdfAccessToken.service.js";
 const router = express.Router();
 
-const client = new Client()
-    .setEndpoint(process.env.APPWRITE_ENDPOINT)
-    .setProject(process.env.APPWRITE_PROJECT_ID)
-
-const storage = new Storage(client);
-
-router.get("/papers/:id", optionalAuth, ...downloadRateLimit, async (req, res) => {
-    console.log("!")
+router.get("/papers/:id", authenticate, requirePremiumOrQuota, ...downloadRateLimit, async (req, res) => {
     try {
+        const fileId = `papers/${req.params.id}`;
 
-        const fileId = `papers/${req.params.id}`
-        console.log(fileId)
-        // const pdfBuffer = await storage.getFileDownload(
-        //     "68a5689f000a8af36f8a",
-        //     fileId
-        // );
-
-        // const pdfDoc = await PDFDocument.load(pdfBuffer);
-
-        // const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-        // const pages = pdfDoc.getPages();
-
-        // for (const page of pages) {
-
-        //     const { width, height } = page.getSize();
-
-        //     const minDimension = Math.min(width, height);
-        //     const fontSize = minDimension * 0.08; 
-        //     const angle=Math.atan(height/width)*(180/Math.PI);
-        //     console.log(width,height,angle)
-        //     const textWidth = font.widthOfTextAtSize("NITKKRPYQS.IN", fontSize);
-
-        //     const x = (width/2 -(textWidth/2)*Math.cos(angle)) ;
-        //     const y = (height/2+(textWidth/2)*Math.sin(angle)) ;
-
-        //     page.drawText("NITKKRPYQS.IN", {
-        //         x,
-        //         y,
-        //         size: fontSize,
-        //         font,
-        //         rotate: degrees(angle),
-        //         opacity: 0.30,
-        //         color: rgb(0.5, 0.5, 0.5),
-        //     });
-
-        //     page.drawText("Downloaded from nitkkrpyqs.in", {
-
-        //         x: 20,
-
-        //         y: 20,
-
-        //         size: 10,
-
-        //         font,
-
-        //         opacity: 0.7,
-
-        //         color: rgb(0, 0, 0)
-
-        //     });
-
-        // }
-        // if (!fileId) {
-        //     return res.status(404).json({
-        //         message: "Paper not found",
-        //     });
-        // }
-        console.log("rohith")
-        const command = new GetObjectCommand({
-        Bucket: process.env.R2_BUCKET_NAME,
-        Key: fileId,
-        });
-
-        const response = await r2.send(command);
-
-        const chunks = [];
-
-        for await (const chunk of response.Body) {
-        chunks.push(chunk);
+        const paper = await Paper.findOne({ r2Key: fileId });
+        if (!paper) {
+            return res.status(404).json({ message: 'Paper not found' });
         }
+        const fileName = `${paper.title} ${paper.examType}`;
 
-        const pdfBuffer = Buffer.concat(chunks);
-        let fileName="";
-        try {
-            const paper = await Paper.findOne({ r2Key: fileId });
-            if (!paper) {
-              return res.status(404).json({ message: 'Paper not found' });
-            }
-            fileName=`${paper.title} ${paper.examType}`
-          } catch (error) {
-            return res.status(500).json({ message: 'Server error', error: error.message });
-          }
-
-        res.setHeader("Content-Type", "application/pdf");
-
-        res.setHeader(
-            "Content-Disposition",
-            `attachment; filename=${fileName}.pdf`
-        );
-
-        res.send(pdfBuffer);
+        // Bytes are no longer proxied through Express — the Cloudflare
+        // Worker (back/workers/pdf-access) streams straight from the now-
+        // private R2 bucket once it verifies this signed, short-lived token.
+        const { url } = generateAccessToken({
+            key: fileId,
+            disposition: "attachment",
+            filename: fileName
+        });
 
         incrementDownload(fileId).catch((e) => console.error("count failed:", e.message));
-
-    } catch (err) {
-
-        console.error(err);
-
-        res.status(500).json({
-            message: "Unable to generate PDF"
+        logAccess({
+            userId: req.user?.id,
+            userName: req.user?.username,
+            userEmail: req.user?.EmailID,
+            plan: req.userAccess?.plan,
+            resourceType: "paper",
+            resourceId: req.params.id,
+            resourceTitle: paper.title,
+            resourceSubject: paper.subject,
+            action: "download",
+            ip: req.ip,
+            userAgent: req.headers["user-agent"]
         });
 
+        return res.redirect(302, url);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            message: "Unable to generate download link"
+        });
     }
-
 });
 
 export default router;

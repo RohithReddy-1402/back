@@ -19,6 +19,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import contactRoutes from "./Routes/contact.routes.js";
 import syllabusRoutes from "./Routes/syllabus.route.js";
+import paymentRoutes, { webhookHandler } from "./Routes/payment.routes.js";
 import optionalAuth from "./middleware/optionalAuth.js";
 import authenticate from "./middleware/authenticate.js";
 import downloadRateLimit from "./middleware/downloadRateLimit.js";
@@ -26,6 +27,7 @@ import emailVerificationRoutes from "./Routes/emailVerification.routes.js";
 import { requestEmailVerification } from "./services/emailVerification.service.js";
 import { getPapersWithCounts, invalidatePapersCache } from "./services/papersCache.service.js";
 import { incrementDownload, readPendingCounts, startDownloadCounterScheduler } from "./services/downloadCounter.service.js";
+import { startDownloadLogScheduler } from "./services/downloadLog.service.js";
 const app = express();
 app.set('trust proxy', 1);
 const allowedOrigins = [
@@ -62,6 +64,10 @@ cloudinary.config({
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+// Razorpay webhook signature is computed over the raw request bytes, so it
+// must be registered with express.raw() BEFORE the global express.json()
+// below consumes the body stream as parsed JSON.
+app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), webhookHandler);
 app.use(express.json());
 app.use(cookieParser());
 import sendOTP from './components/otpMailer.js';
@@ -181,12 +187,19 @@ app.post("/forgotpassword", async (req, res) => {
     });
   }
 });
-app.get('/auth/check', authenticate, (req, res) => {
+app.get('/auth/check', authenticate, async (req, res) => {
+  const user = await User.findById(req.user.id).select('EmailID name role premium subscription freeQuotaUsed');
+  if (!user) {
+    return res.status(401).json({ message: 'User not found' });
+  }
   res.status(200).json({
     user: {
-      email: req.user.EmailID,
-      name: req.user.username,
-      role: req.user.role
+      email: user.EmailID,
+      name: user.name,
+      role: user.role,
+      premium: user.premium,
+      subscription: user.subscription,
+      freeQuotaUsed: user.freeQuotaUsed
     }
   });
 })
@@ -520,6 +533,7 @@ app.use("/api/email-verification", emailVerificationRoutes);
 app.use("/api/contact",contactRoutes);
 app.use("/api/syllabus",syllabusRoutes);
 app.use("/api/download",downloadRoute);
+app.use("/api/payment",paymentRoutes);
 app.delete("/deletepaper/papers/:id", authenticate,async (req, res) => {
   try {
     // console.log("came");
@@ -538,3 +552,4 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 startPaperMailScheduler();
 startDownloadCounterScheduler();
+startDownloadLogScheduler();
