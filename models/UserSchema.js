@@ -7,7 +7,14 @@ const userSchema = new mongoose.Schema({
     emailVerified: { type: Boolean, default: false },
     emailVerifiedAt: { type: Date, default: null },
     role:{type:String,default:"user"},
-    premium:{type:Boolean,default:false}
+    premium:{type:Boolean,default:false},
+    subscription: {
+      plan: { type: String, enum: ['free', 'monthly', 'yearly', 'lifetime'], default: 'free' },
+      status: { type: String, enum: ['active', 'expired', 'cancelled'], default: 'active' },
+      startedAt: { type: Date, default: null },
+      expiresAt: { type: Date, default: null }
+    },
+    freeQuotaUsed: { type: Number, default: 0 }
   });
   userSchema.pre('save', async function (next) {
   if (this.isModified('password')) {
