@@ -1,0 +1,21 @@
+name = "pdf-access-worker"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# Match the WHOLE domain, not just /access/* — this Worker itself only
+# serves /access/<token> and 403/404s everything else, so routing all of
+# pdf.nitkkrpyqs.in through it means nothing can fall through to the old
+# public R2 binding on this hostname even if that binding isn't removed yet.
+[[routes]]
+pattern = "pdf.nitkkrpyqs.in/*"
+zone_name = "nitkkrpyqs.in"
+
+# Private R2 binding — the bucket has NO public access; this binding is the
+# only way anything can reach it, and only this Worker has it.
+[[r2_buckets]]
+binding = "PDF_BUCKET"
+bucket_name = "nitkkrpyqs"
+
+# PDF_ACCESS_SECRET is NOT set here on purpose — it's a secret, not config.
+# Set it with: wrangler secret put PDF_ACCESS_SECRET
+# (same value as PDF_ACCESS_SECRET in back/.env)
