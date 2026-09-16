@@ -17,12 +17,17 @@ const getRazorpay = () => {
   return _razorpay;
 };
 
-// Amounts in paise.
-export const PLAN_PRICES = {
-  monthly: 100,
-  yearly: 1000,
-  lifetime: 3000
-};
+// Prices are configured in whole rupees via env vars (PLAN_PRICE_*_INR) so
+// they can be changed without a code deploy — Razorpay itself is charged in
+// paise, so we convert here. Read live (not cached at module load) so a
+// process restart is all that's needed to pick up a new value.
+const rupeesToPaise = (rupees) => Math.round(Number(rupees) * 100);
+
+export const getPlanPrices = () => ({
+  monthly: rupeesToPaise(process.env.PLAN_PRICE_MONTHLY_INR ?? 1),
+  yearly: rupeesToPaise(process.env.PLAN_PRICE_YEARLY_INR ?? 10),
+  lifetime: rupeesToPaise(process.env.PLAN_PRICE_LIFETIME_INR ?? 25)
+});
 
 const PLAN_DURATION_MS = {
   monthly: 30 * 24 * 60 * 60 * 1000,
@@ -30,7 +35,7 @@ const PLAN_DURATION_MS = {
 };
 
 export const createOrder = async ({ userId, plan }) => {
-  const amount = PLAN_PRICES[plan];
+  const amount = getPlanPrices()[plan];
   if (!amount) {
     throw new Error(`Invalid plan: ${plan}`);
   }
