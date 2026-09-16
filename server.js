@@ -20,6 +20,7 @@ import cookieParser from 'cookie-parser';
 import contactRoutes from "./Routes/contact.routes.js";
 import syllabusRoutes from "./Routes/syllabus.route.js";
 import paymentRoutes, { webhookHandler } from "./Routes/payment.routes.js";
+import priceFeedbackRoutes from "./Routes/priceFeedback.routes.js";
 import optionalAuth from "./middleware/optionalAuth.js";
 import authenticate from "./middleware/authenticate.js";
 import downloadRateLimit from "./middleware/downloadRateLimit.js";
@@ -534,6 +535,7 @@ app.use("/api/contact",contactRoutes);
 app.use("/api/syllabus",syllabusRoutes);
 app.use("/api/download",downloadRoute);
 app.use("/api/payment",paymentRoutes);
+app.use("/api/price-feedback",priceFeedbackRoutes);
 app.delete("/deletepaper/papers/:id", authenticate,async (req, res) => {
   try {
     // console.log("came");
