@@ -19,6 +19,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import contactRoutes from "./Routes/contact.routes.js";
 import syllabusRoutes from "./Routes/syllabus.route.js";
+import attendanceRoutes from "./Routes/attendance.routes.js";
 import paymentRoutes, { webhookHandler } from "./Routes/payment.routes.js";
 import priceFeedbackRoutes from "./Routes/priceFeedback.routes.js";
 import optionalAuth from "./middleware/optionalAuth.js";
@@ -533,6 +534,7 @@ app.post("/verifiedpaper/papers/:id", authenticate,async (req, res) => {
 app.use("/api/email-verification", emailVerificationRoutes);
 app.use("/api/contact",contactRoutes);
 app.use("/api/syllabus",syllabusRoutes);
+app.use("/attendance", authenticate, attendanceRoutes);
 app.use("/api/download",downloadRoute);
 app.use("/api/payment",paymentRoutes);
 app.use("/api/price-feedback",priceFeedbackRoutes);
