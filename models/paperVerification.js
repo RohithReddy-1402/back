@@ -9,6 +9,7 @@ const verifypaperSchema = new mongoose.Schema({
     examType:{type: String, required: true},
     name:{type: String, required: true},
     mail:{type: String, required: true},
-    r2Key:{type:String,required:true}
+    r2Key:{type:String,required:true},
+    userId:{type:mongoose.Schema.Types.ObjectId,ref:"User",default:null}
   });
 export default mongoose.model('verifypaper', verifypaperSchema);

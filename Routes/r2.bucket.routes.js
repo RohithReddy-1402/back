@@ -4,10 +4,11 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
 
 import r2 from "../config/r2.config.js";
+import authenticate from "../middleware/authenticate.js";
 
 const router = express.Router();
 
-router.get("/upload-url", async (req, res) => {
+router.get("/upload-url", authenticate, async (req, res) => {
   try {
     const r2Id = randomUUID();
 
