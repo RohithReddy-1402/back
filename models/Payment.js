@@ -19,5 +19,7 @@ const paymentSchema = new mongoose.Schema(
 
 paymentSchema.index({ razorpayOrderId: 1 });
 paymentSchema.index({ userId: 1 });
+// Profile "payment history": a user's own payments, newest first.
+paymentSchema.index({ userId: 1, status: 1, createdAt: -1 });
 
 export default mongoose.model("Payment", paymentSchema);
