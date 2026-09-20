@@ -5,7 +5,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "migrate": "node-pg-migrate up -m migrations",
+    "migrate:down": "node-pg-migrate down -m migrations"
   },
   "engines": {
     "node": "22.x"
@@ -28,6 +30,7 @@
     "express-rate-limit": "^8.7.0",
     "firebase": "^12.1.0",
     "fs": "^0.0.1-security",
+    "google-auth-library": "^10.9.1",
     "googleapis": "^156.0.0",
     "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.2",
@@ -36,8 +39,10 @@
     "multer-storage-cloudinary": "^4.0.0",
     "nanoid": "^5.1.5",
     "node-appwrite": "^17.2.0",
+    "node-pg-migrate": "^9.0.0",
     "nodemon": "^3.1.11",
     "pdf-lib": "^1.17.1",
+    "pg": "^8.23.0",
     "rate-limit-redis": "^6.0.1",
     "razorpay": "^2.9.8",
     "resend": "^6.26.0"

@@ -6,7 +6,6 @@ import "dotenv/config";
 import express from 'express';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
 import { ID } from 'appwrite';
 import multer from 'multer';
@@ -24,12 +23,22 @@ import paymentRoutes, { webhookHandler } from "./Routes/payment.routes.js";
 import priceFeedbackRoutes from "./Routes/priceFeedback.routes.js";
 import optionalAuth from "./middleware/optionalAuth.js";
 import authenticate from "./middleware/authenticate.js";
+import requireAdmin from "./middleware/requireAdmin.js";
+import profileRoutes from "./Routes/profile.routes.js";
+import rewardsRoutes from "./Routes/rewards.routes.js";
+import forumRoutes from "./Routes/forum.routes.js";
+import { anonymizeProfile as anonymizeForumProfile } from "./services/forum/profile.service.js";
+import { startForumUploadCleanup } from "./services/forum/upload.service.js";
+import { createContribution, approveContribution, rejectContribution } from "./services/contribution.service.js";
+import { avatarUrlFor } from "./services/profile.service.js";
 import downloadRateLimit from "./middleware/downloadRateLimit.js";
 import emailVerificationRoutes from "./Routes/emailVerification.routes.js";
 import { requestEmailVerification } from "./services/emailVerification.service.js";
 import { getPapersWithCounts, invalidatePapersCache } from "./services/papersCache.service.js";
 import { incrementDownload, readPendingCounts, startDownloadCounterScheduler } from "./services/downloadCounter.service.js";
 import { startDownloadLogScheduler } from "./services/downloadLog.service.js";
+import { verifyGoogleCredential } from "./services/googleIdentity.service.js";
+import { respondWithError } from "./services/httpError.js";
 const app = express();
 app.set('trust proxy', 1);
 const allowedOrigins = [
@@ -82,7 +91,10 @@ import { uploadFile, getFileViewURL, getFileDownloadURL ,deleteAppWriteFile} fro
 import downloadRoute from "./Routes/paper.download.routes.js"
 import r2Routes from "./Routes/r2.bucket.routes.js"
 import { queuePaperApproval, startPaperMailScheduler } from "./services/paperMailQueue.service.js"
-mongoose.connect('mongodb+srv://Rohith_Coder:Rohith_14_IM_@qpaper.7lzyiwo.mongodb.net/')
+if (!process.env.MONGO_URI) {
+  throw new Error("MONGO_URI is not set");
+}
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 app.use("/public",express.static("public"));
@@ -190,12 +202,14 @@ app.post("/forgotpassword", async (req, res) => {
   }
 });
 app.get('/auth/check', authenticate, async (req, res) => {
-  const user = await User.findById(req.user.id).select('EmailID name role premium subscription freeQuotaUsed');
+  const user = await User.findById(req.user.id).select('EmailID name role premium subscription freeQuotaUsed avatarKey');
   if (!user) {
     return res.status(401).json({ message: 'User not found' });
   }
   res.status(200).json({
     user: {
+      id: user._id,
+      avatarUrl: avatarUrlFor(user.avatarKey),
       email: user.EmailID,
       name: user.name,
       role: user.role,
@@ -205,14 +219,16 @@ app.get('/auth/check', authenticate, async (req, res) => {
     }
   });
 })
-app.delete('/deleteaccount', async (req, res) => {
+app.delete('/deleteaccount', authenticate, async (req, res) => {
   try {
-    const { EmailID } = req.body;
-    const user = await User.findOne({ EmailID });
-    if (!user) {
+    // Only the signed-in user can delete their own account. The forum profile
+    // is anonymised first: if Postgres is down we fail (and the user retries)
+    // rather than leave a deleted person's handle attached to their posts.
+    await anonymizeForumProfile(req.user.id);
+    const { deletedCount } = await User.deleteOne({ _id: req.user.id });
+    if (!deletedCount) {
       return res.status(404).json({ message: "User not found" });
     }
-    await User.deleteOne({ EmailID });
   } catch (err) {
     return res.status(400).json({ message: "Server Error" });
   }
@@ -310,21 +326,10 @@ app.post('/login', async (req, res) => {
 });
 app.post('/login/google', async (req, res) => {
   try {
-    let { EmailID, name } = req.body;
-
-    // The web frontend sends a Google Identity / Firebase ID token as
-    // `credential`. Both are JWTs carrying `email` and `name` claims. We decode
-    // (not verify) to stay compatible with the pre-existing trust model of this
-    // route — TODO: verify with google-auth-library / firebase-admin.
-    if (!EmailID && req.body.credential) {
-      const claims = jwt.decode(req.body.credential) || {};
-      EmailID = claims.email;
-      name = name || claims.name;
-    }
-
-    if (!EmailID) {
-      return res.status(400).json({ message: 'Email is required' });
-    }
+    // Clients send a Google Identity Services credential or a Firebase ID
+    // token as `credential`. The email comes only from the verified token —
+    // never from the request body, or anyone could sign in as anyone.
+    const { email: EmailID, name } = await verifyGoogleCredential(req.body.credential);
 
     let user = await User.findOne({ EmailID });
 
@@ -357,7 +362,7 @@ app.post('/login/google', async (req, res) => {
         },
       });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    respondWithError(res, error, "Google login error");
   }
 });
 app.post('/logout', (req, res) => {
@@ -436,8 +441,11 @@ app.get('/api/stats/downloads', authenticate, async (req, res) => {
   }
 });
 app.use("/api/r2", r2Routes);
-app.post("/upload", async (req, res) => {
-  const { title, subject, fileId, semester, subCode, year, institution, name, mail, r2Key ,r2ETag} = req.body;
+app.post("/upload", authenticate, async (req, res) => {
+  const { title, subject, fileId, semester, subCode, year, institution, name, r2Key ,r2ETag} = req.body;
+  // The contributor is whoever is logged in; the mail (used for the approval
+  // notification) comes from the token, not from the request body.
+  const mail = req.user.EmailID || req.body.mail;
 
   if (!title || !subject || !fileId || !semester || !subCode || !year || !institution || !name || !mail || !r2Key) {
     console.log("Missing fields:", { title, subject, fileId, semester, subCode, year, institution, name, mail, r2Key });
@@ -456,18 +464,25 @@ app.post("/upload", async (req, res) => {
       name,
       mail,
       r2Key,
-
+      userId: req.user.id,
     });
 
     await newPaper.save();
-    
+
+    // Status record behind the profile's upload history and the reward. If it
+    // fails the upload still stands: approval falls back to pending.userId.
+    createContribution({
+      userId: req.user.id, name, mail, r2Key, title, subject,
+      subjectCode: subCode, sem: semester, year, examType: institution,
+    }).catch((err) => console.error("createContribution failed:", err.message));
+
     res.status(201).json({ message: "Paper uploaded successfully", paper: newPaper });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
-app.get("/verifypapers", async (req, res) => {
+app.get("/verifypapers", authenticate, requireAdmin, async (req, res) => {
   try {
     const papers = await verifypaperSchema.find();
     res.status(200).json(papers);
@@ -477,7 +492,7 @@ app.get("/verifypapers", async (req, res) => {
   }
 });
 
-app.post("/verifiedpaper/papers/:id", authenticate,async (req, res) => {
+app.post("/verifiedpaper/papers/:id", authenticate, requireAdmin, async (req, res) => {
   try {
     const body = req.body;
     const r2Key=`papers/${req.params.id}`
@@ -500,13 +515,38 @@ app.post("/verifiedpaper/papers/:id", authenticate,async (req, res) => {
       examType: body.examType,
       sem: body.sem,
       paper_url:url,
-      r2Key:r2Key
+      r2Key:r2Key,
+      migratedToR2: true,
+      migratedAt: new Date(),
     });
     await new_paper.save();
     console.log("saved");
     await invalidatePapersCache();
     const deletedPending = await verifypaperSchema.findOneAndDelete({ r2Key:r2Key });
     console.log("deleted");
+
+    // Credit the contributor (idempotent). Never let a reward problem undo an
+    // approval that has already gone live.
+    try {
+      await approveContribution({
+        r2Key,
+        pendingDoc: deletedPending,
+        adminId: req.user.id,
+        meta: {
+          title: body.title,
+          subject: body.subject,
+          subjectCode: body.subjectCode,
+          sem: body.sem,
+          year: body.year,
+          examType: body.examType,
+        },
+        bonusPoints: body.bonusPoints,
+        bonusReason: body.bonusReason,
+        bonusNote: body.bonusNote,
+      });
+    } catch (rewardErr) {
+      console.error("Reward crediting failed for", r2Key, rewardErr);
+    }
 
     if (deletedPending?.mail) {
       queuePaperApproval({
@@ -538,13 +578,27 @@ app.use("/attendance", authenticate, attendanceRoutes);
 app.use("/api/download",downloadRoute);
 app.use("/api/payment",paymentRoutes);
 app.use("/api/price-feedback",priceFeedbackRoutes);
-app.delete("/deletepaper/papers/:id", authenticate,async (req, res) => {
+app.use("/api/profile",profileRoutes);
+app.use("/api/rewards",rewardsRoutes);
+app.use("/api/forum", forumRoutes);
+app.delete("/deletepaper/papers/:id", authenticate, requireAdmin, async (req, res) => {
   try {
     // console.log("came");
     const r2Key=`papers/${req.params.id}`
     console.log(r2Key)
-    await verifypaperSchema.findOneAndDelete({ r2Key: r2Key });
-    
+    const deletedPending = await verifypaperSchema.findOneAndDelete({ r2Key: r2Key });
+    try {
+      await rejectContribution({
+        r2Key,
+        reason: req.body?.reason ?? req.query.reason,
+        note: req.body?.note,
+        adminId: req.user.id,
+        pendingDoc: deletedPending,
+      });
+    } catch (rejectErr) {
+      console.error("rejectContribution failed for", r2Key, rejectErr);
+    }
+
     res.status(200).json({ success: true, message: "File deleted successfully" });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -557,3 +611,4 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 startPaperMailScheduler();
 startDownloadCounterScheduler();
 startDownloadLogScheduler();
+startForumUploadCleanup();

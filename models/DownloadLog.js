@@ -23,6 +23,8 @@ const downloadLogSchema = new mongoose.Schema({
 downloadLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 3600 });
 downloadLogSchema.index({ resourceType: 1, resourceId: 1 });
 downloadLogSchema.index({ userEmail: 1 });
+// Profile "download history": a user's own downloads, newest first.
+downloadLogSchema.index({ userId: 1, action: 1, createdAt: -1 });
 // Free-text search across who downloaded what, e.g. `DownloadLog.find({ $text: { $search: "rohith" } })`.
 downloadLogSchema.index({ userName: "text", userEmail: "text", resourceTitle: "text" });
 

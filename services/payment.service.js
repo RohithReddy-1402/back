@@ -66,16 +66,28 @@ export const createOrder = async ({ userId, plan }) => {
   return { orderId: order.id, amount, currency: "INR", keyId: process.env.RAZORPAY_KEY_ID };
 };
 
-/** Shared by the client-verify flow and the admin manual-grant route. */
-export const activateSubscription = async (user, plan) => {
+const PLAN_RANK = { monthly: 1, yearly: 2 };
+
+/**
+ * Shared by the client-verify flow, the admin manual-grant route and reward
+ * redemption. Default behaviour replaces the subscription starting now.
+ * With `{ stack: true }` (reward redemption) a new monthly/yearly period is
+ * added on top of a still-active one, and never downgrades its plan label.
+ */
+export const activateSubscription = async (user, plan, { stack = false } = {}) => {
   const now = new Date();
   const duration = PLAN_DURATION_MS[plan];
+  const current = user.subscription;
+  const currentEnd = current?.expiresAt ? new Date(current.expiresAt) : null;
+  const stacking = Boolean(
+    stack && duration && current?.status === "active" && PLAN_RANK[current.plan] && currentEnd && currentEnd > now
+  );
 
   user.subscription = {
-    plan,
+    plan: stacking && PLAN_RANK[current.plan] > PLAN_RANK[plan] ? current.plan : plan,
     status: "active",
-    startedAt: now,
-    expiresAt: duration ? new Date(now.getTime() + duration) : null
+    startedAt: stacking ? current.startedAt : now,
+    expiresAt: duration ? new Date((stacking ? currentEnd : now).getTime() + duration) : null
   };
   user.premium = true;
   await user.save();
