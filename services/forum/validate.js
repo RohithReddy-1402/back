@@ -1,3 +1,4 @@
+import sanitizeHtml from "sanitize-html";
 import { HttpError } from "../httpError.js";
 
 // Names nobody can take as a handle or community, to prevent impersonation.
@@ -30,6 +31,23 @@ export const cleanBool = (value, field, fallback) => {
 };
 
 export const oneOf = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
+
+// The rich post editor sends HTML; this is the only place user-authored HTML
+// is allowed to survive as markup anywhere in this codebase, so the allowlist
+// is deliberately minimal — no script/style/iframe/event handlers, no
+// non-http(s) URL schemes (rules out `javascript:`/`data:` payloads).
+const RICH_TEXT_TAGS = ["p", "h1", "h2", "h3", "strong", "em", "s", "u", "ul", "ol", "li", "a", "img", "blockquote", "br"];
+
+export const sanitizeForumHtml = (html) =>
+  sanitizeHtml(html, {
+    allowedTags: RICH_TEXT_TAGS,
+    allowedAttributes: { a: ["href"], img: ["src", "alt", "width", "height"] },
+    allowedSchemes: ["http", "https"],
+    allowedSchemesByTag: { img: ["http", "https"] },
+    transformTags: {
+      a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer nofollow", target: "_blank" }),
+    },
+  });
 
 /** Postgres unique-violation → 409 with a friendly message. */
 export const rethrowUnique = (error, message) => {
