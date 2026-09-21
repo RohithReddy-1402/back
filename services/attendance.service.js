@@ -235,9 +235,13 @@ export async function markRecords(userId, { semesterId, date, entries }) {
       throw new HttpError(400, "Each entry needs subjectId, startTime, endTime, and a valid status");
     }
 
+    // Ad-hoc entries are keyed by (date, subjectId, startTime) — matching
+    // AttendanceRecord's partial unique index — so a second entry for the
+    // same subject/day with a different start time creates a new record
+    // instead of overwriting the first one.
     const filter = slotId
       ? { userId, date, slotId }
-      : { userId, date, subjectId, slotId: null };
+      : { userId, date, subjectId, slotId: null, startTime };
 
     const record = await AttendanceRecord.findOneAndUpdate(
       filter,
@@ -377,19 +381,32 @@ export async function getSubjectCalendar(userId, semesterId, subjectId, month) {
   for (const slot of slots) {
     if (!slotByDay.has(slot.dayOfWeek)) slotByDay.set(slot.dayOfWeek, slot);
   }
-  const recordByDate = new Map(records.map((r) => [r.date, r]));
+  // A subject can have more than one ad-hoc record on the same day (e.g. two
+  // separate sessions), so every date maps to a *list* of records, not one —
+  // collapsing to a single record here previously hid whichever record
+  // didn't win the map insert.
+  const recordsByDate = new Map();
+  for (const record of records) {
+    const list = recordsByDate.get(record.date) ?? [];
+    list.push(record);
+    recordsByDate.set(record.date, list);
+  }
 
   const days = dates.map((date) => {
     const slot = slotByDay.get(dayOfWeekFromDate(date)) ?? null;
-    const record = recordByDate.get(date) ?? null;
+    const dayRecords = (recordsByDate.get(date) ?? []).map((r) => ({
+      recordId: String(r._id),
+      startTime: r.startTime,
+      endTime: r.endTime,
+      status: r.status,
+    }));
 
     return {
       date,
       hasSlot: !!slot,
-      status: record?.status ?? null,
-      recordId: record ? String(record._id) : null,
-      startTime: record?.startTime ?? slot?.startTime ?? null,
-      endTime: record?.endTime ?? slot?.endTime ?? null,
+      slotStartTime: slot?.startTime ?? null,
+      slotEndTime: slot?.endTime ?? null,
+      records: dayRecords,
     };
   });
 
