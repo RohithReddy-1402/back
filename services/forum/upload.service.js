@@ -3,6 +3,7 @@ import { S3Client, PutObjectCommand, HeadObjectCommand, DeleteObjectCommand } fr
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { query } from "../../config/pg.js";
 import { HttpError } from "../httpError.js";
+import { assetUrl } from "./serialize.js";
 
 // Forum images live in their own PUBLIC bucket (served at FORUM_IMG_BASE_URL
 // via Cloudflare's CDN), separate from the private papers bucket.
@@ -49,7 +50,7 @@ export const createImageUploadUrl = async (userId, body = {}) => {
     "INSERT INTO uploads (key, user_id, bytes, content_type) VALUES ($1, $2, $3, $4)",
     [key, userId, bytes, body.contentType],
   );
-  return { key, uploadUrl, method: "PUT", headers: { "Content-Type": body.contentType } };
+  return { key, url: assetUrl(key), uploadUrl, method: "PUT", headers: { "Content-Type": body.contentType } };
 };
 
 /** Validates `[{ key, width, height }]` from a post request (shape only). */
@@ -103,6 +104,24 @@ export const attachImages = async (db, userId, postId, images) => {
     );
   }
   await db.query("UPDATE uploads SET status = 'attached' WHERE key = ANY($1)", [keys]);
+};
+
+/**
+ * Marks whichever of `keys` are the caller's own pending uploads as
+ * attached, so the abandoned-upload sweep won't delete them. Used for images
+ * embedded inline in a rich-text post body (as opposed to `attachImages`'
+ * `post_images` gallery rows). Silently skips any key that isn't the
+ * caller's own pending upload — an inline `<img>` may just as well point at
+ * an external URL, which is fine and not an error.
+ */
+export const markUploadsAttached = async (db, userId, keys) => {
+  if (!keys.length) return;
+  const { rows } = await db.query(
+    "SELECT key FROM uploads WHERE key = ANY($1) AND user_id = $2 AND status = 'pending' FOR UPDATE",
+    [keys, userId],
+  );
+  if (!rows.length) return;
+  await db.query("UPDATE uploads SET status = 'attached' WHERE key = ANY($1)", [rows.map((r) => r.key)]);
 };
 
 /** Deletes uploads never attached to a post (abandoned drafts) after 24h. */

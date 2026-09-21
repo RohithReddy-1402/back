@@ -95,6 +95,7 @@ export const serializePost = (row, viewerId = null, { isMod = false } = {}) => {
     kind: row.kind,
     title: row.title,
     body: canSeeContent ? row.body : "",
+    bodyFormat: row.body_format,
     url: canSeeContent ? row.url : null,
     images: canSeeContent
       ? (row.images || []).map((img) => ({ url: assetUrl(img.key), width: img.width, height: img.height }))

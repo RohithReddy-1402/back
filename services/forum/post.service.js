@@ -1,15 +1,29 @@
 import { query, withTx } from "../../config/pg.js";
 import { HttpError } from "../httpError.js";
 import { fromId36, toId36 } from "./ids.js";
-import { cleanBool, cleanText, oneOf } from "./validate.js";
+import { cleanBool, cleanText, oneOf, sanitizeForumHtml } from "./validate.js";
 import { serializePost } from "./serialize.js";
 import { POST_SELECT } from "./postQuery.js";
 import { loadCommunity, isModOf } from "./community.service.js";
-import { attachImages, cleanImageList } from "./upload.service.js";
+import { attachImages, cleanImageList, markUploadsAttached } from "./upload.service.js";
 import { blockUserId } from "./profile.service.js";
 
 const POSTS_PER_DAY = 20;
 const POSTS_PER_DAY_NEW_ACCOUNT = 2; // forum profile younger than 24h
+
+const IMG_BASE = (process.env.FORUM_IMG_BASE_URL || "").replace(/\/$/, "");
+
+/** Sanitizes a rich-post body and returns it alongside the R2 keys (if any) its `<img>` tags reference. */
+const prepareRichBody = (rawHtml) => {
+  const html = sanitizeForumHtml(rawHtml);
+  const keys = [];
+  if (IMG_BASE) {
+    for (const match of html.matchAll(/<img[^>]+src="([^"]+)"/g)) {
+      if (match[1].startsWith(`${IMG_BASE}/`)) keys.push(match[1].slice(IMG_BASE.length + 1));
+    }
+  }
+  return { html, keys };
+};
 
 const cleanUrl = (raw) => {
   const text = cleanText(raw, "Link", { min: 1, max: 2000 });
@@ -60,7 +74,10 @@ export const createPost = async (actor, body = {}) => {
   if (kind === "image" && !community.allow_images) throw new HttpError(400, "This community doesn't allow images");
 
   const title = cleanText(body.title, "Title", { min: 1, max: 300 });
-  const text = cleanText(body.body ?? "", "Body", { max: 40000 });
+  const rawText = cleanText(body.body ?? "", "Body", { max: 40000 });
+  const bodyFormat = kind === "text" ? oneOf(body.bodyFormat, ["markdown", "html"], "markdown") : "markdown";
+  const { html: text, keys: inlineImageKeys } =
+    bodyFormat === "html" ? prepareRichBody(rawText) : { html: rawText, keys: [] };
   const url = kind === "link" ? cleanUrl(body.url) : null;
   const images = kind === "image" ? cleanImageList(body.images) : null;
   const isAnonymous = cleanBool(body.isAnonymous, "isAnonymous", false);
@@ -84,14 +101,15 @@ export const createPost = async (actor, body = {}) => {
 
   const id = await withTx(async (db) => {
     const { rows: [post] } = await db.query(
-      `INSERT INTO posts (community_id, author_id, is_anonymous, kind, title, body, url, is_locked)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-      [community.id, actor.userId, isAnonymous, kind, title, text, url, commentsDisabled],
+      `INSERT INTO posts (community_id, author_id, is_anonymous, kind, title, body, body_format, url, is_locked)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [community.id, actor.userId, isAnonymous, kind, title, text, bodyFormat, url, commentsDisabled],
     );
     // Authors start with their own upvote (score 1), like Reddit; no karma for it.
     await db.query("INSERT INTO post_votes (user_id, post_id, value) VALUES ($1, $2, 1)", [actor.userId, post.id]);
     await db.query("UPDATE communities SET post_count = post_count + 1 WHERE id = $1", [community.id]);
     if (images) await attachImages(db, actor.userId, post.id, images);
+    if (inlineImageKeys.length) await markUploadsAttached(db, actor.userId, inlineImageKeys);
     return post.id;
   });
 
@@ -101,9 +119,9 @@ export const createPost = async (actor, body = {}) => {
 /** Authors edit the body only (titles are fixed, like Reddit). */
 export const editPost = async (actor, id36, body = {}) => {
   const id = fromId36(id36, "Post not found");
-  const text = cleanText(body.body, "Body", { max: 40000 });
+  const rawText = cleanText(body.body, "Body", { max: 40000 });
   const { rows: [post] } = await query(
-    "SELECT author_id, kind, removed_at, deleted_at FROM posts WHERE id = $1",
+    "SELECT author_id, kind, body_format, removed_at, deleted_at FROM posts WHERE id = $1",
     [id],
   );
   if (!post) throw new HttpError(404, "Post not found");
@@ -111,7 +129,15 @@ export const editPost = async (actor, id36, body = {}) => {
   if (post.removed_at || post.deleted_at) throw new HttpError(400, "Removed or deleted posts can't be edited");
   if (post.kind === "link") throw new HttpError(400, "Link posts can't be edited");
 
-  await query("UPDATE posts SET body = $2, edited_at = now() WHERE id = $1", [id, text]);
+  // A post's body_format is set at creation and doesn't change on edit —
+  // an edit to a rich post is still sanitized HTML in, HTML out.
+  const { html: text, keys: inlineImageKeys } =
+    post.body_format === "html" ? prepareRichBody(rawText) : { html: rawText, keys: [] };
+
+  await withTx(async (db) => {
+    await db.query("UPDATE posts SET body = $2, edited_at = now() WHERE id = $1", [id, text]);
+    if (inlineImageKeys.length) await markUploadsAttached(db, actor.userId, inlineImageKeys);
+  });
   return serializePost(await loadPostRow(id, actor.userId), actor.userId);
 };
 
