@@ -40,6 +40,7 @@ import { incrementDownload, readPendingCounts, startDownloadCounterScheduler } f
 import { startDownloadLogScheduler } from "./services/downloadLog.service.js";
 import { verifyGoogleCredential } from "./services/googleIdentity.service.js";
 import { respondWithError } from "./services/httpError.js";
+import { generateAccessToken } from "./services/pdfAccessToken.service.js";
 const app = express();
 app.set('trust proxy', 1);
 const allowedOrigins = [
@@ -490,6 +491,22 @@ app.get("/verifypapers", authenticate, requireAdmin, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+// The R2 bucket is private — admins reviewing a not-yet-approved paper need a
+// signed preview URL the same way approved papers get one, since a raw
+// https://pdf.<domain>/<r2Key> URL is rejected by the pdf-access Worker.
+app.get("/verifypapers/papers/:id/preview", authenticate, requireAdmin, async (req, res) => {
+  try {
+    const r2Key = `papers/${req.params.id}`;
+    const pending = await verifypaperSchema.findOne({ r2Key });
+    if (!pending) {
+      return res.status(404).json({ message: "Paper not found" });
+    }
+    const { url } = generateAccessToken({ key: r2Key, disposition: "inline", filename: pending.title });
+    res.status(200).json({ url });
+  } catch (error) {
+    respondWithError(res, error, "Preview error");
   }
 });
 
