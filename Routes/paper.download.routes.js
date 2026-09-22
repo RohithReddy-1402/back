@@ -10,7 +10,8 @@ const router = express.Router();
 
 router.get("/papers/:id", authenticate, requirePremiumOrQuota, ...downloadRateLimit, async (req, res) => {
     try {
-        const paper = await Paper.findOne({ paper_id: req.params.id });
+        const fileId = `papers/${req.params.id}`;
+        const paper = await Paper.findOne({ r2Key: fileId });
         if (!paper) {
             return res.status(404).json({ message: 'Paper not found' });
         }

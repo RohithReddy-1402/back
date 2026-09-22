@@ -36,9 +36,10 @@ const router =express.Router();
 router.get("/view/:fielId", authenticate, requirePremiumOrQuota, ...downloadRateLimit, async (req, res) => {
     const routeId = req.params.fielId;
 
+    const r2Key = `papers/${routeId}`;
+
     try {
-        const paper = await Paper.findOne({ paper_id: routeId });
-        const r2Key = paper?.r2Key;
+        const paper = await Paper.findOne({ r2Key });
 
         logAccess({
             userId: req.user?.id,
