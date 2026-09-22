@@ -42,6 +42,7 @@
     "node-pg-migrate": "^9.0.0",
     "nodemon": "^3.1.11",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.10.38",
     "pg": "^8.23.0",
     "rate-limit-redis": "^6.0.1",
     "razorpay": "^2.9.8",

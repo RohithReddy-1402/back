@@ -30,6 +30,7 @@ import forumRoutes from "./Routes/forum.routes.js";
 import { anonymizeProfile as anonymizeForumProfile } from "./services/forum/profile.service.js";
 import { startForumUploadCleanup } from "./services/forum/upload.service.js";
 import { createContribution, approveContribution, rejectContribution } from "./services/contribution.service.js";
+import { watermarkAndSwap } from "./services/paperWatermarkPipeline.service.js";
 import { avatarUrlFor } from "./services/profile.service.js";
 import downloadRateLimit from "./middleware/downloadRateLimit.js";
 import emailVerificationRoutes from "./Routes/emailVerification.routes.js";
@@ -521,6 +522,13 @@ app.post("/verifiedpaper/papers/:id", authenticate, requireAdmin, async (req, re
     });
     await new_paper.save();
     console.log("saved");
+
+    try {
+      await watermarkAndSwap(new_paper);
+    } catch (watermarkErr) {
+      console.error("Auto-watermark failed for", r2Key, watermarkErr);
+    }
+
     await invalidatePapersCache();
     const deletedPending = await verifypaperSchema.findOneAndDelete({ r2Key:r2Key });
     console.log("deleted");

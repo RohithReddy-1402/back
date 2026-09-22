@@ -13,6 +13,8 @@ const paperSchema = new mongoose.Schema({
   r2ETag: { type: String, default: null,},
   migratedToR2: {type: Boolean, default: false,},
   migratedAt: {type: Date,default: null,},
+  watermarked: {type: Boolean, default: false,},
+  watermarkedAt: {type: Date, default: null,},
 });
 paperSchema.index({ r2Key: 1 });
 paperSchema.index({ paper_id: 1 });

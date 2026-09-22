@@ -10,24 +10,23 @@ const router = express.Router();
 
 router.get("/papers/:id", authenticate, requirePremiumOrQuota, ...downloadRateLimit, async (req, res) => {
     try {
-        const fileId = `papers/${req.params.id}`;
-
-        const paper = await Paper.findOne({ r2Key: fileId });
+        const paper = await Paper.findOne({ paper_id: req.params.id });
         if (!paper) {
             return res.status(404).json({ message: 'Paper not found' });
         }
+        const r2Key = paper.r2Key;
         const fileName = `${paper.title} ${paper.examType}`;
 
         // Bytes are no longer proxied through Express — the Cloudflare
         // Worker (back/workers/pdf-access) streams straight from the now-
         // private R2 bucket once it verifies this signed, short-lived token.
         const { url } = generateAccessToken({
-            key: fileId,
+            key: r2Key,
             disposition: "attachment",
             filename: fileName
         });
 
-        incrementDownload(fileId).catch((e) => console.error("count failed:", e.message));
+        incrementDownload(r2Key).catch((e) => console.error("count failed:", e.message));
         logAccess({
             userId: req.user?.id,
             userName: req.user?.username,
