@@ -318,8 +318,14 @@ app.post('/login', async (req, res) => {
       .json({
         token,
         user: {
-          EmailID: user.EmailID,
-          username: user.name,
+          id: user._id,
+          avatarUrl: avatarUrlFor(user.avatarKey),
+          email: user.EmailID,
+          name: user.name,
+          role: user.role,
+          premium: user.premium,
+          subscription: user.subscription,
+          freeQuotaUsed: user.freeQuotaUsed,
         },
       });
   } catch (error) {
@@ -359,8 +365,14 @@ app.post('/login/google', async (req, res) => {
       .json({
         token,
         user: {
-          EmailID: user.EmailID,
-          username: user.name,
+          id: user._id,
+          avatarUrl: avatarUrlFor(user.avatarKey),
+          email: user.EmailID,
+          name: user.name,
+          role: user.role,
+          premium: user.premium,
+          subscription: user.subscription,
+          freeQuotaUsed: user.freeQuotaUsed,
         },
       });
   } catch (error) {
