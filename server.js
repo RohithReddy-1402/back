@@ -204,9 +204,16 @@ app.post("/forgotpassword", async (req, res) => {
   }
 });
 app.get('/auth/check', authenticate, async (req, res) => {
-  const user = await User.findById(req.user.id).select('EmailID name role premium subscription freeQuotaUsed avatarKey');
+  const user = await User.findById(req.user.id).select('EmailID name role premium subscription freeQuotaUsed avatarKey emailVerified');
   if (!user) {
     return res.status(401).json({ message: 'User not found' });
+  }
+  // A token issued at registration is valid JWT-wise before the account is
+  // verified, but the session itself shouldn't count as "logged in" until
+  // then — otherwise dismissing the verify-email prompt leaves the user
+  // signed in anyway.
+  if (!user.emailVerified) {
+    return res.status(403).json({ message: 'Please verify your email before logging in.', code: 'EMAIL_NOT_VERIFIED' });
   }
   res.status(200).json({
     user: {
