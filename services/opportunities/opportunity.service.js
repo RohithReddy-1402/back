@@ -457,3 +457,67 @@ export const trackApplyClick = async (id) => {
   if (!row) throw new HttpError(404, "Opportunity not found");
   return { applicationUrl: row.application_url };
 };
+
+// --------------------------------------------------------- edit suggestions
+const serializeSuggestion = (row) => ({
+  id: String(row.id),
+  opportunityId: String(row.opportunity_id),
+  opportunity: row.opportunity_title
+    ? { id: String(row.opportunity_id), title: row.opportunity_title, slug: row.opportunity_slug, company: { name: row.opportunity_company } }
+    : undefined,
+  note: row.note,
+  status: row.status,
+  createdAt: row.created_at,
+});
+
+export const suggestEdit = async (opportunityId, userId, body = {}) => {
+  const note = cleanText(body.note, "Note", { min: 1, max: 500 });
+  const { rowCount } = await query("SELECT 1 FROM opportunities WHERE id = $1", [opportunityId]);
+  if (!rowCount) throw new HttpError(404, "Opportunity not found");
+  const { rows: [row] } = await query(
+    "INSERT INTO opportunity_edit_suggestions (opportunity_id, submitted_by, note) VALUES ($1, $2, $3) RETURNING *",
+    [opportunityId, userId, note],
+  );
+  return serializeSuggestion(row);
+};
+
+export const listEditSuggestions = async (params = {}) => {
+  const limit = clampLimit(params.limit);
+  const status = oneOf(params.status, ["open", "resolved", "dismissed"], "open");
+  const cursor = decodeCursor(params.cursor);
+  const values = [status];
+  let cursorClause = "";
+  if (cursor?.id !== undefined) {
+    values.push(cursor.id);
+    cursorClause = `AND s.id < $${values.length}`;
+  }
+  values.push(limit + 1);
+
+  const { rows } = await query(
+    `SELECT s.*, o.title AS opportunity_title, o.slug AS opportunity_slug, o.company_name AS opportunity_company
+       FROM opportunity_edit_suggestions s
+       JOIN opportunities o ON o.id = s.opportunity_id
+      WHERE s.status = $1 ${cursorClause}
+      ORDER BY s.id DESC LIMIT $${values.length}`,
+    values,
+  );
+  const hasMore = rows.length > limit;
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+  return {
+    items: page.map(serializeSuggestion),
+    hasMore,
+    nextCursor: hasMore && last ? encodeCursor({ id: last.id }) : null,
+  };
+};
+
+export const resolveEditSuggestion = async (id, adminId, action) => {
+  const status = oneOf(action, ["resolved", "dismissed"], null);
+  if (!status) throw new HttpError(400, "Invalid action");
+  const { rows: [row] } = await query(
+    "UPDATE opportunity_edit_suggestions SET status = $2, resolved_by = $3, resolved_at = now() WHERE id = $1 RETURNING *",
+    [id, status, adminId],
+  );
+  if (!row) throw new HttpError(404, "Suggestion not found");
+  return serializeSuggestion(row);
+};

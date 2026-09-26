@@ -35,6 +35,7 @@ router.post("/uploads/presign", authenticate, uploadLimit, opp.presignUpload);
 
 // -------------------------------------------------------- student submission
 router.post("/submit", authenticate, submitLimit, opp.submit);
+router.post("/:id/suggest-edit", authenticate, submitLimit, opp.suggestEdit);
 
 // ------------------------------------------------------------------- admin
 // Registered before the generic "/:slug" catch-all below — otherwise
@@ -44,6 +45,8 @@ router.get("/admin", ...admin, opp.adminList);
 router.get("/admin/reports", ...admin, opp.adminReports);
 router.post("/admin/reports/:id/resolve", ...admin, opp.adminResolveReport);
 router.get("/admin/stats", ...admin, opp.adminStats);
+router.get("/admin/edit-suggestions", ...admin, opp.adminEditSuggestions);
+router.post("/admin/edit-suggestions/:id/resolve", ...admin, opp.adminResolveEditSuggestion);
 router.get("/admin/:id", ...admin, opp.adminGet);
 router.post("/admin", ...admin, opp.adminCreate);
 router.put("/admin/:id", ...admin, opp.adminUpdate);

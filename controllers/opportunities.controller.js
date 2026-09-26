@@ -61,6 +61,10 @@ export const submit = wrap(async (req, res) => {
   res.status(201).json(await opportunities.submitOpportunity(req.user.id, req.body));
 });
 
+export const suggestEdit = wrap(async (req, res) => {
+  res.status(201).json(await opportunities.suggestEdit(req.params.id, req.user.id, req.body));
+});
+
 // ------------------------------------------------------------------- admin
 export const adminList = wrap(async (req, res) => {
   res.status(200).json(await opportunities.listAdmin(req.query));
@@ -134,4 +138,12 @@ export const adminResolveReport = wrap(async (req, res) => {
 
 export const adminStats = wrap(async (req, res) => {
   res.status(200).json(await opportunities.fetchStats());
+});
+
+export const adminEditSuggestions = wrap(async (req, res) => {
+  res.status(200).json(await opportunities.listEditSuggestions(req.query));
+});
+
+export const adminResolveEditSuggestion = wrap(async (req, res) => {
+  res.status(200).json(await opportunities.resolveEditSuggestion(req.params.id, req.user.id, req.body?.action));
 });
