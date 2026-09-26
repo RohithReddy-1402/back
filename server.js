@@ -27,8 +27,10 @@ import requireAdmin from "./middleware/requireAdmin.js";
 import profileRoutes from "./Routes/profile.routes.js";
 import rewardsRoutes from "./Routes/rewards.routes.js";
 import forumRoutes from "./Routes/forum.routes.js";
+import opportunitiesRoutes from "./Routes/opportunities.routes.js";
 import { anonymizeProfile as anonymizeForumProfile } from "./services/forum/profile.service.js";
 import { startForumUploadCleanup } from "./services/forum/upload.service.js";
+import { startOpportunityUploadCleanup } from "./services/opportunities/upload.service.js";
 import { createContribution, approveContribution, rejectContribution } from "./services/contribution.service.js";
 import { watermarkAndSwap } from "./services/paperWatermarkPipeline.service.js";
 import { avatarUrlFor } from "./services/profile.service.js";
@@ -625,6 +627,7 @@ app.use("/api/price-feedback",priceFeedbackRoutes);
 app.use("/api/profile",profileRoutes);
 app.use("/api/rewards",rewardsRoutes);
 app.use("/api/forum", forumRoutes);
+app.use("/api/opportunities", opportunitiesRoutes);
 app.delete("/deletepaper/papers/:id", authenticate, requireAdmin, async (req, res) => {
   try {
     // console.log("came");
@@ -656,3 +659,4 @@ startPaperMailScheduler();
 startDownloadCounterScheduler();
 startDownloadLogScheduler();
 startForumUploadCleanup();
+startOpportunityUploadCleanup();
