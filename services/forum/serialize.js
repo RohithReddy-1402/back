@@ -42,6 +42,7 @@ export const serializeCommunity = (row) => ({
   bannerUrl: assetUrl(row.banner_key),
   type: row.type,
   allowImages: row.allow_images,
+  requiresApproval: row.requires_approval,
   memberCount: row.member_count,
   postCount: row.post_count,
   createdAt: row.created_at,
@@ -56,6 +57,7 @@ export const serializeCommunityBrief = (row) => ({
   iconUrl: assetUrl(row.icon_key),
   memberCount: row.member_count,
   myRole: row.my_role ?? null,
+  requiresApproval: row.requires_approval,
 });
 
 /** Reddit-style URL slug from a title: "CGPA cutoff?" → "cgpa_cutoff". */
@@ -84,7 +86,9 @@ export const serializePost = (row, viewerId = null, { isMod = false } = {}) => {
   const isMine = Boolean(viewerId) && viewerId === row.author_id;
   const isDeleted = Boolean(row.deleted_at);
   const isRemoved = Boolean(row.removed_at);
-  const canSeeContent = !isDeleted && (!isRemoved || isMine || isMod);
+  // Posts awaiting approval (or rejected) are a tombstone for everyone but
+  // their author and admins — a shared link can't jump the review queue.
+  const canSeeContent = !isDeleted && (!isRemoved || isMine || isMod) && (row.status === "published" || isMine || isMod);
 
   return {
     id: toId36(row.id),
@@ -101,6 +105,9 @@ export const serializePost = (row, viewerId = null, { isMod = false } = {}) => {
       ? (row.images || []).map((img) => ({ url: assetUrl(img.key), width: img.width, height: img.height }))
       : [],
     flair: row.flair,
+    company: row.company,
+    tags: row.tags || [],
+    status: row.status,
     score: row.score,
     myVote: row.my_vote ?? 0,
     saved: Boolean(row.saved),

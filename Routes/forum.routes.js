@@ -144,6 +144,10 @@ router.post("/admin/anon-author/:type/:id", member, forum.revealAnonymousAuthor)
 router.post("/admin/users/:handle/ban", member, forum.siteBan);
 router.delete("/admin/users/:handle/ban", member, forum.siteUnban);
 router.post("/admin/communities/:name/remove", member, forum.removeCommunity);
+router.get("/admin/pending-posts", member, forum.pendingPosts);
+router.get("/admin/pending-posts/count", member, forum.pendingPostsCount);
+router.post("/admin/pending-posts/:id/approve", member, forum.approvePendingPost);
+router.post("/admin/pending-posts/:id/reject", member, forum.rejectPendingPost);
 
 // ------------------------------------------------------------------ share
 // Open Graph HTML for link-preview bots (see services/forum/share.service.js).

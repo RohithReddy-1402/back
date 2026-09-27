@@ -164,6 +164,11 @@ export const createCommunity = async (actor, body = {}) => {
 export const updateCommunity = async (name, actor, body = {}) => {
   const community = await loadCommunity(name, actor.userId);
   assertCanModerate(community, actor);
+  // Whether posts here need admin approval before going public is a site-wide
+  // moderation policy, not something a community's own mods should flip.
+  if (body.requiresApproval !== undefined && !actor.isAdmin) {
+    throw new HttpError(403, "Admins only");
+  }
 
   const fields = {
     title: cleanText(body.title, "Title", { min: 1, max: 100, optional: true }),
@@ -171,6 +176,7 @@ export const updateCommunity = async (name, actor, body = {}) => {
     rules: cleanRules(body.rules),
     type: body.type === undefined ? undefined : oneOf(body.type, ["public", "restricted"], community.type),
     allow_images: cleanBool(body.allowImages, "allowImages", undefined),
+    requires_approval: cleanBool(body.requiresApproval, "requiresApproval", undefined),
   };
   if (fields.rules) fields.rules = JSON.stringify(fields.rules);
   const entries = Object.entries(fields).filter(([, v]) => v !== undefined);

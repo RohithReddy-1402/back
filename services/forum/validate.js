@@ -32,11 +32,21 @@ export const cleanBool = (value, field, fallback) => {
 
 export const oneOf = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
 
+/** Trimmed, deduped, lowercased tag list — up to 5 tags of at most 30 chars each. */
+export const cleanTags = (raw) => {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) throw new HttpError(400, "Tags must be a list");
+  const tags = [...new Set(raw.map((t) => String(t).trim().toLowerCase()).filter(Boolean))];
+  if (tags.length > 5) throw new HttpError(400, "At most 5 tags");
+  if (tags.some((t) => t.length > 30)) throw new HttpError(400, "Each tag must be at most 30 characters");
+  return tags;
+};
+
 // The rich post editor sends HTML; this is the only place user-authored HTML
 // is allowed to survive as markup anywhere in this codebase, so the allowlist
 // is deliberately minimal — no script/style/iframe/event handlers, no
 // non-http(s) URL schemes (rules out `javascript:`/`data:` payloads).
-const RICH_TEXT_TAGS = ["p", "h1", "h2", "h3", "strong", "em", "s", "u", "ul", "ol", "li", "a", "img", "blockquote", "br"];
+const RICH_TEXT_TAGS = ["p", "h1", "h2", "h3", "strong", "em", "s", "u", "ul", "ol", "li", "a", "img", "blockquote", "br", "pre", "code"];
 
 export const sanitizeForumHtml = (html) =>
   sanitizeHtml(html, {

@@ -21,7 +21,7 @@ export const postSelect = ({ savedOnly = false, extraCols = "", extraFrom = "" }
 
 export const POST_SELECT = postSelect();
 
-export const VISIBLE = "p.removed_at IS NULL AND p.deleted_at IS NULL";
+export const VISIBLE = "p.removed_at IS NULL AND p.deleted_at IS NULL AND p.status = 'published'";
 
 /**
  * Hides content from users the viewer blocked. A block made from anonymous

@@ -279,6 +279,17 @@ export const siteBan = modAction((req) => moderation.siteBan(actorOf(req), req.p
 export const siteUnban = modAction((req) => moderation.siteUnban(actorOf(req), req.params.handle));
 export const removeCommunity = modAction((req) => moderation.removeCommunity(actorOf(req), req.params.name, req.body));
 
+export const pendingPosts = wrap(async (req, res) => {
+  res.status(200).json(await moderation.pendingQueue(actorOf(req), req.query));
+});
+
+export const pendingPostsCount = wrap(async (req, res) => {
+  res.status(200).json(await moderation.pendingCount(actorOf(req)));
+});
+
+export const approvePendingPost = modAction((req) => moderation.approvePendingPost(actorOf(req), req.params.id));
+export const rejectPendingPost = modAction((req) => moderation.rejectPendingPost(actorOf(req), req.params.id, req.body));
+
 // ------------------------------------------------------------------ share
 
 export const sharePreview = async (req, res) => {

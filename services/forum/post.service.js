@@ -1,7 +1,7 @@
 import { query, withTx } from "../../config/pg.js";
 import { HttpError } from "../httpError.js";
 import { fromId36, toId36 } from "./ids.js";
-import { cleanBool, cleanText, oneOf, sanitizeForumHtml } from "./validate.js";
+import { cleanBool, cleanTags, cleanText, oneOf, sanitizeForumHtml } from "./validate.js";
 import { serializePost } from "./serialize.js";
 import { POST_SELECT } from "./postQuery.js";
 import { loadCommunity, isModOf } from "./community.service.js";
@@ -82,6 +82,9 @@ export const createPost = async (actor, body = {}) => {
   const images = kind === "image" ? cleanImageList(body.images) : null;
   const isAnonymous = cleanBool(body.isAnonymous, "isAnonymous", false);
   const commentsDisabled = cleanBool(body.commentsDisabled, "commentsDisabled", false);
+  const company = cleanText(body.company ?? "", "Company", { max: 120 }) || null;
+  const tags = cleanTags(body.tags);
+  const status = community.requires_approval && !actor.isAdmin ? "pending" : "published";
 
   // Daily caps count every post (deleted too), so delete-and-repost can't dodge them.
   if (!actor.isAdmin) {
@@ -101,13 +104,16 @@ export const createPost = async (actor, body = {}) => {
 
   const id = await withTx(async (db) => {
     const { rows: [post] } = await db.query(
-      `INSERT INTO posts (community_id, author_id, is_anonymous, kind, title, body, body_format, url, is_locked)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-      [community.id, actor.userId, isAnonymous, kind, title, text, bodyFormat, url, commentsDisabled],
+      `INSERT INTO posts (community_id, author_id, is_anonymous, kind, title, body, body_format, url, is_locked, status, company, tags)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+      [community.id, actor.userId, isAnonymous, kind, title, text, bodyFormat, url, commentsDisabled, status, company, tags],
     );
     // Authors start with their own upvote (score 1), like Reddit; no karma for it.
     await db.query("INSERT INTO post_votes (user_id, post_id, value) VALUES ($1, $2, 1)", [actor.userId, post.id]);
-    await db.query("UPDATE communities SET post_count = post_count + 1 WHERE id = $1", [community.id]);
+    // Pending posts don't count publicly until an admin approves them.
+    if (status === "published") {
+      await db.query("UPDATE communities SET post_count = post_count + 1 WHERE id = $1", [community.id]);
+    }
     if (images) await attachImages(db, actor.userId, post.id, images);
     if (inlineImageKeys.length) await markUploadsAttached(db, actor.userId, inlineImageKeys);
     return post.id;

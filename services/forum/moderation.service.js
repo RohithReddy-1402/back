@@ -266,6 +266,64 @@ export const adminQueue = async (actor, q) => {
   return buildQueue(actor, null, q);
 };
 
+// ------------------------------------------------------- pending posts
+
+/** Posts awaiting approval (from communities with `requires_approval`), newest first. */
+export const pendingQueue = async (actor, q = {}) => {
+  if (!actor.isAdmin) throw new HttpError(403, "Admins only");
+  const limit = parseLimit(q.limit, 25);
+  const cursor = decodeCursor(q.cursor);
+  // $1 is the viewer id POST_SELECT always expects (for my_vote/saved joins).
+  const { rows } = await query(
+    `${POST_SELECT} WHERE p.status = 'pending' ${cursor ? "AND p.id < $3" : ""} ORDER BY p.id DESC LIMIT $2`,
+    cursor ? [actor.userId, limit + 1, cursor.id] : [actor.userId, limit + 1],
+  );
+  const page = toPage(rows, limit, (r) => encodeCursor(0, r.id));
+  return { ...page, items: page.items.map((r) => serializePost(r, actor.userId, { isMod: true })) };
+};
+
+export const pendingCount = async (actor) => {
+  if (!actor.isAdmin) throw new HttpError(403, "Admins only");
+  const { rows: [{ n }] } = await query("SELECT count(*)::int AS n FROM posts WHERE status = 'pending'");
+  return { count: n };
+};
+
+export const approvePendingPost = async (actor, id36) => {
+  if (!actor.isAdmin) throw new HttpError(403, "Admins only");
+  const id = fromId36(id36, "Post not found");
+  return withTx(async (db) => {
+    const { rows: [post] } = await db.query(
+      "UPDATE posts SET status = 'published' WHERE id = $1 AND status = 'pending' RETURNING community_id",
+      [id],
+    );
+    if (!post) throw new HttpError(404, "No pending post found");
+    await db.query("UPDATE communities SET post_count = post_count + 1 WHERE id = $1", [post.community_id]);
+    await logModAction(
+      { communityId: post.community_id, actorId: actor.userId, action: "approve_pending_post", targetType: "post", targetId: id36 },
+      db,
+    );
+    return { status: "published" };
+  });
+};
+
+export const rejectPendingPost = async (actor, id36, body = {}) => {
+  if (!actor.isAdmin) throw new HttpError(403, "Admins only");
+  const reason = cleanText(body.reason ?? "", "Reason", { max: 300 });
+  const id = fromId36(id36, "Post not found");
+  return withTx(async (db) => {
+    const { rows: [post] } = await db.query(
+      "UPDATE posts SET status = 'rejected', removal_reason = $2 WHERE id = $1 AND status = 'pending' RETURNING community_id",
+      [id, reason || null],
+    );
+    if (!post) throw new HttpError(404, "No pending post found");
+    await logModAction(
+      { communityId: post.community_id, actorId: actor.userId, action: "reject_pending_post", targetType: "post", targetId: id36, reason: reason || null },
+      db,
+    );
+    return { status: "rejected" };
+  });
+};
+
 export const modLog = async (name, actor, q = {}) => {
   const community = await loadCommunity(name, actor.userId);
   assertCanModerate(community, actor);
