@@ -12,6 +12,9 @@
 // Usage:
 //   node scripts/migrateSyllabus.js            # dry run, prints a summary
 //   node scripts/migrateSyllabus.js --apply    # actually upserts
+//   node scripts/migrateSyllabus.js --only=nitkkr_307,nitkkr_308 [--apply]
+//                                              # restrict to specific catalog ids, leaving
+//                                              # every other document untouched
 
 import "dotenv/config";
 import fs from "fs";
@@ -29,6 +32,10 @@ const CATALOG_PATH = path.join(SYLLABUS_DATA_DIR, "courses-info.json");
 const COURSE_DIR = path.join(SYLLABUS_DATA_DIR, "course");
 
 const apply = process.argv.includes("--apply");
+const onlyArg = process.argv.find((a) => a.startsWith("--only="));
+const onlyIds = onlyArg
+  ? new Set(onlyArg.slice("--only=".length).split(",").map((x) => x.trim()).filter(Boolean))
+  : null;
 
 function loadCourseDetail(route) {
   if (!route) return null;
@@ -64,8 +71,14 @@ async function main() {
   if (!fs.existsSync(CATALOG_PATH)) {
     throw new Error(`Catalog not found at ${CATALOG_PATH}`);
   }
-  const catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, "utf8"));
+  let catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, "utf8"));
   console.log(`Loaded ${catalog.length} catalog entries from ${CATALOG_PATH}`);
+  if (onlyIds) {
+    catalog = catalog.filter((entry) => onlyIds.has(entry.id));
+    const missing = [...onlyIds].filter((id) => !catalog.some((e) => e.id === id));
+    if (missing.length) throw new Error(`--only ids not in catalog: ${missing.join(", ")}`);
+    console.log(`Restricted to ${catalog.length} entr${catalog.length === 1 ? "y" : "ies"} via --only.`);
+  }
 
   const docs = catalog.map((entry) => {
     const detail = loadCourseDetail(entry.route);
